@@ -1,0 +1,621 @@
+> https://www.icourse163.org/learn/USTB-1206407811?tid=1466983455#/learn/announce
+
+课程重点：
+
+![https://s3.us-west-2.amazonaws.com/secure.notion-static.com/0e24ff47-a45c-4c04-9d3e-e81d3ebe4ac4/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45EIPT3X45%2F20220314%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220314T053748Z&X-Amz-Expires=86400&X-Amz-Signature=82902992fcdf3d022b08516cd3d94b6010de9b80d78c4b68b5c2ef91de70cb73&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22Untitled.png%22&x-id=GetObject](https://s3.us-west-2.amazonaws.com/secure.notion-static.com/0e24ff47-a45c-4c04-9d3e-e81d3ebe4ac4/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45EIPT3X45%2F20220314%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220314T053748Z&X-Amz-Expires=86400&X-Amz-Signature=82902992fcdf3d022b08516cd3d94b6010de9b80d78c4b68b5c2ef91de70cb73&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22Untitled.png%22&x-id=GetObject)
+
+
+
+课程难点：
+
+![https://s3.us-west-2.amazonaws.com/secure.notion-static.com/07c17661-1127-4aab-9cb4-2d9d15209bc5/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45EIPT3X45%2F20220314%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220314T053431Z&X-Amz-Expires=86400&X-Amz-Signature=1b2e611878062c02acd023ba7fbb48d21557a8685e384ad336696bc26195515e&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22Untitled.png%22&x-id=GetObject](https://s3.us-west-2.amazonaws.com/secure.notion-static.com/07c17661-1127-4aab-9cb4-2d9d15209bc5/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45EIPT3X45%2F20220314%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220314T053431Z&X-Amz-Expires=86400&X-Amz-Signature=1b2e611878062c02acd023ba7fbb48d21557a8685e384ad336696bc26195515e&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22Untitled.png%22&x-id=GetObject)
+
+# 数理逻辑
+
+数理逻辑：用==数学方法==，来研究==推理规律==的数学学科
+
+![image-20220314135000664](离散数学(北京科技大学 MOOC).assets/image-20220314135000664-16472370033551-16472370980482.png)
+
+
+
+## 命题逻辑
+
+逻辑主要研究==推理过程==，而推理过程必须依靠==命题==来表述。
+
+在命题逻辑中，“<u>命题</u>”被看作是<u>最小单位</u>。
+
+![image-20220314135330089](离散数学(北京科技大学 MOOC).assets/image-20220314135330089-16472372119131.png)
+
+### 命题
+
+推理是数理逻辑研究的中心问题，推理的前提和结论都是表达判断的陈述句。
+
+因而表达判断的陈述句构成了推理的基本单位，称<u>**具有真假意义的陈述句**</u>为==命题==。
+
+
+
+#### 真值
+
+命题总是具有<u>一个确定的真或假的“值”</u>，称为真值。
+
+真值只有两种情况：
+
+- “真”：记为True，用1表示
+- “假”：记为False，用0表示
+
+
+
+>##### 真值为真的命题称为*真命题*；真值为假的命题，称为*假命题*
+
+
+
+#### 判断给定的句子是否为命题
+
+1. 首先应该是<u>陈述句</u>
+
+2. 其次具有<u>唯一的真值</u>
+
+   > 也许此真值的结果目前不知道，但这个真值必然有唯一的结果
+
+
+
+例如：
+
+1.	该吃早饭了！ 
+  祈使句，不是命题
+
+2.	我正在说谎
+  虽然为陈述句，但无法判定其真值。==悖论不是命题==。
+
+3.	x-y>2
+
+   真值的结果不唯一，无法判断，不是命题
+
+4.	不在同一直线上的三点，确定一个平面
+
+   是陈述句，是正确的判定。是真命题
+
+5.	郑州是河南省的省会
+
+   是陈述句，是真命题
+
+6.	下一个星期天会下雪。
+
+   是命题。虽然==目前无法判定真值，但它是有唯一真值的==。
+
+#### 命题的分类
+
+命题可分为两种类型：
+
+- 原子命题（简单命题）：不能再分解为简单的命题
+
+- ==复合命题==：通过<u>联结词</u>、标点符号将<u>原子命题</u>组合而成。
+
+  > eg：玫瑰是红的并且紫罗兰是蓝的
+
+  
+
+复合命题的基本性质：
+
+​		其真值可以由其<u>==原子命题的真值==</u>，以及它们复合成该复合命题的<u>==联结方式==</u>确定。
+
+
+
+#### 命题标识符
+
+为了能用数学的方法来研究命题之间的逻辑关系和推理，需要将命题符号化。
+
+命题标识符，即为==<u>表示命题的符号</u>==。
+
+> 通常使用大写字母P,Q,R...，或者带下标的大写字母(P~1~)，或是数字([12])表示命题
+
+
+
+命题标识符的分类：
+
+- 命题常元：一个命题标识符，表示是==确定的==简单命题。
+
+- 命题变元：是一个用于表示任意简单命题的==位置标志==。
+
+  >因为命题变元可以表示任意简单命题，所以它不能确定真值。
+  >**故命题变元不是命题**
+
+  当命题变元P，用一个特定的简单命题取代时，P此时才能确定真值。此动作称为对P进行==<u>指派</u>==。
+
+
+
+### 联结词
+
+- 原子命题和联结词可以组成复合命题
+- 联结词确定复合命题的逻辑形式
+- 联结词来源于自然语言，但与自然语言中的联结词有一定的差别
+
+> 从本质上讲，此处讨论的联结词只注重“真值”，而不顾及具体内容。
+>
+> 亦称“真值联结词”，类似于逻辑上的运算符
+
+
+
+离散符号：
+
+https://blog.csdn.net/weixin_55399173/article/details/120988532?utm_medium=distribute.pc_aggpage_search_result.none-task-blog-2~aggregatepage~first_rank_ecpm_v1~rank_v31_ecpm-1-120988532.pc_agg_new_rank&utm_term=markdown+%E7%A6%BB%E6%95%A3&spm=1000.2123.3001.4430
+
+
+
+#### 否定联结词（$\neg$ 否）
+
+$$
+设P为任一命题，复合命题'非P'(或称P的否定)称为P的否定式，记作\neg P,读作'非P'\\
+\neg称为否定联结词
+$$
+
+
+
+命题P的真值，与其否定$\neg p$的关系：
+
+|  P   | $\neg P$ |
+| :--: | :------: |
+|  0   |    1     |
+|  1   |    0     |
+
+> $\neg P$为真，当且仅当$P$为假
+
+在自然语言中，常用的表示否定的联结词：“非”，“不”，“没有”，“无”，“并不”
+
+
+
+#### 合取联结词（$\wedge$ 同真才真）(wedge)
+
+$$
+设P,Q为任意二命题，复合命题'P并且Q'(或P与Q)称为P和Q的合取式，记作P\wedge Q，读作'P与Q'\\
+\wedge称为合取联结词
+$$
+
+
+
+命题PQ，与其合取$P\wedge Q$的关系：
+
+|  P   |  Q   | $P\wedge Q$ |
+| :--: | :--: | :---------: |
+|  0   |  0   |      0      |
+|  0   |  1   |      0      |
+|  1   |  0   |      0      |
+|  1   |  1   |      1      |
+
+> $P\wedge Q$为真，当且仅当P和Q同时成立
+
+在自然语言中，表示合取的联结词：“并且”，“同时”，“以及”，“既···又···”，“不但···而且···”
+
+
+
+#### 析取联结词（$\vee$ 同假才假）(vee)
+
+$$
+设P,Q为任意二命题，复合命题'P或Q'称为P和Q的析取式。记作P\vee Q，读作'P或Q'\\
+\vee 称为析取联结词
+$$
+
+命题PQ，与其析取$P\vee Q$的关系：
+
+|  P   |  Q   | $P \vee Q$ |
+| :--: | :--: | :--------: |
+|  0   |  0   |     0      |
+|  0   |  1   |     1      |
+|  1   |  0   |     1      |
+|  1   |  1   |     1      |
+
+> $P \vee Q$为真，当且仅当P与Q中至少一个为真
+
+
+
+
+
+联结词$\vee$是<u>可兼或</u>；
+
+而自然语言的或，既可以是<u>排斥或</u>，也可以是<u>可兼或</u>
+
+> eg：明天要么下雨要么是晴天（排斥或）
+>
+> eg：小芳爱唱歌或跳舞（可兼或）
+
+
+
+#### 蕴涵联结词（$\rightarrow$ 前真后假才为假）(rightarrow)
+
+蕴涵联结词，也称为条件联结词。
+
+>P$\rightarrow$Q的逻辑关系为：**Q是P的必要条件，P是Q的充分条件**。
+
+$$
+P,Q为任意二命题，复合命题'若P,则Q'称为P和Q的蕴涵式，记作P\rightarrow Q，读作"如果P则Q"。\\
+\rightarrow称为蕴涵连接词。称P为前件，Q为后件
+$$
+
+
+
+命题PQ，与命题P$\rightarrow$Q的关系：
+
+|  P   |  Q   | P$\rightarrow$Q |
+| :--: | :--: | :-------------: |
+|  0   |  0   |        1        |
+|  0   |  1   |        1        |
+|  1   |  0   |        0        |
+|  1   |  1   |        1        |
+
+> P$\rightarrow$Q为假，当且仅当P为真Q为假
+
+
+
+对于给定的命题$P\rightarrow Q$:
+
+- 逆换式：$Q\rightarrow P$，类似于逆命题
+
+- 反换式：$\neg P\rightarrow \neg Q$，类似于否命题
+
+- 逆反式：$\neg Q\rightarrow \neg P$，类似于逆否命题
+
+  
+
+#### 等价联结词（$\leftrightarrow$ 相同则真）(leftrightarrow)
+
+等价联结词，也称为双条件联结词
+
+> P$\rightarrow$Q的逻辑关系为：**P与Q互为充分必要条件**。
+
+$$
+设P,Q为任意二命题，复合命题“P当且仅当Q”称为命题P和Q的等价式，记作P\leftrightarrow Q，读作“P当且仅当Q”\\
+\leftrightarrow称为等价联结词
+$$
+
+
+
+命题PQ，与命题P$\leftrightarrow$Q的关系：
+
+|  P   |  Q   | P$\leftrightarrow$Q |
+| :--: | :--: | :-----------------: |
+|  0   |  0   |          1          |
+|  0   |  1   |          0          |
+|  1   |  0   |          0          |
+|  1   |  1   |          1          |
+
+
+
+命题P$\leftrightarrow$Q与之完全等价：($P\rightarrow Q$)$\wedge$($Q\rightarrow P$)
+
+即“P当且仅当Q”，与“若P则Q，并且若Q则P”等价
+
+
+
+#### 联结词的运算顺序
+
+1. ()
+
+2. $\neg$
+
+3. $\wedge$, $\vee$, $\rightarrow$, $\leftrightarrow$  
+
+   同一优先级的，从左往右运算
+
+   
+
+### 命题公式（赋值后才是命题）
+
+#### 命题公式的定义
+
+命题演算的合式公式，又称==命题公式（简称公式）==，是如下递归定义的：
+
+1. ==<u>单个命题变元</u>==是合式公式，并简称为原子命题公式
+2. 如果$A$是合式公式，那么($\neg A$)也是合式公式	
+3. 如果$A,B$都是合式公式，那么($A\wedge B$)，($A\vee B$)，($A\rightarrow B$)，($A\leftrightarrow B$)都是合式公式
+4. 当且仅当有限次地应用前三条，所得到的字符串是合式公式
+
+> 条件1称为基础，2,3称为归纳，4称为界限
+
+
+
+注意，==`命题公式本身不一定是命题`==，只有对公式中的每一个<u>命题变元，指派了真值</u>之后，它才是一个命题
+
+
+
+#### n元命题公式
+
+如果一个命题公式中，总共含有n种不同的命题变元，则称其为==n元命题公式==
+
+> eg：$(P\wedge Q) \rightarrow \neg(Q \wedge R)$是三元命题公式
+
+
+
+#### 命题公式的层次
+
+- 若公式A是单个的命题变元，则称公式A为0层公式
+- 称A为n+1(n$\geq$0)层公式，当前仅当：
+  1. $A=\neg B$，$B$是n层公式
+  2. $A=B\wedge C$，其中B,C分别为i层和j层公式，且n=max(i,j)
+  3. $A= B\vee C$，其中B,C的层次同(2)
+  4. $A=B\rightarrow C$，其中B,C的层次同(2)
+  5. $A=B\leftrightarrow C$，其中B,C的层次同(2)
+
+> eg：$(\neg P \wedge Q)\rightarrow R$是3层公式
+
+
+
+#### 命题公式的赋值与真值表
+
+设$P_1,P_2,\dots,P_n$是出现在公式A中的所有命题变元，给$P_1,P_2,\dots,P_n$各指派一个真值，称对A的一个==赋值或解释==
+
+- 若指派的一组值，使得A的值为1，则称这组值为A的==成真赋值==
+
+- 若指派的一组值，使得A的值为0，则称这组值为A的==成假赋值==
+
+> eg：对于公式$P\vee Q\rightarrow R$ ，P,Q,R=1 0 0是成假赋值；P,Q,R=1 0 1是成真 赋值
+
+
+
+对于含n个命题变元的命题公式，对其赋值的形式做如下规定：
+
+- 设A中含的命题变元为$P_1,P_2,\dots,P_n$，赋值$a_1\ a_2\ \dots\ a_n$($a_i=0/1$)，是指$P_1=a_1,P_2=a_2,\dots P_n=a_n$
+- 设A中含的命题变元为$P,Q,R,\dots$，赋值$a_1\ a_2\ \dots\ a_n$($a_i=0/1$)，是指$P=a_1,Q=a_2,\dots$，即==按字典序赋值==
+
+
+
+设$P_1,P_2,\dots,P_n$是出现在公式A中的所有命题变元，将<u>公式A</u>在所有$2^n$个赋值下<u>的</u><u>取值情况</u>列为表，即A的==真值表==
+
+构造真值表的步骤：
+
+1. 枚举所有命题变元的可能性
+2. 按从低到高的层次顺序，写出各个子公式的值
+
+
+
+例如对于公式$(\neg P \wedge Q) \rightarrow \neg R$，其真值表如下：
+
+| $P\ Q\ R$ | $\neg P$ | $\neg R$ | $\neg P \wedge Q$ | $(\neg P \wedge Q) \rightarrow \neg R$ |
+| :-------: | :------: | :------: | :---------------: | :------------------------------------: |
+|   0 0 0   |    1     |    1     |         0         |                   1                    |
+|   0 0 1   |    1     |    0     |         0         |                   1                    |
+|   0 1 0   |    1     |    1     |         1         |                   1                    |
+|   0 1 1   |    1     |    0     |         1         |                   0                    |
+|   1 0 0   |    0     |    1     |         0         |                   1                    |
+|   1 0 1   |    0     |    0     |         0         |                   1                    |
+|   1 1 0   |    0     |    1     |         0         |                   1                    |
+|   1 1 1   |    0     |    0     |         0         |                   1                    |
+
+
+
+设A为任一命题公式，特殊的：
+
+- 若A在它的所有赋值情况下，取值均为真，则称A是==重言式或永真式==
+- 若A在它的所有赋值情况下，取值均为假，则称A是==矛盾式或永假式==
+  - 若A不是矛盾式，则称A是==可满足式==（重言式+非重言的可满足式）
+
+
+
+#### 命题的符号化
+
+将一个用文字描述的命题，转换成由命题标识符、联结词、括号表示的命题的过程，称为==命题的符号化(或称命题的翻译)==
+
+
+
+命题符号化的基本步骤：
+
+1. 找出命题中所包含的`原子命题`，并将其用命题标识符表示
+2. 确定命题中的连词对应的联结词
+3. 用正确的语法，将原命题表示称命题标识符、联结词、括号组成的命题公式
+
+
+
+例如：对于命题“虽然你这次取得了第一名，但这并不代表你永远是第一名”，其符号化的过程：
+
+​	设P：这一次你取得了第一名
+​	Q:这代表你永远是第一名
+​	原命题可表示为$P^\neg Q$		
+
+
+
+####  小结
+
+![image-20220314194233454](离散数学(北京科技大学 MOOC).assets/image-20220314194233454.png)
+
+
+
+### 命题公式之间的关系
+
+#### 逻辑等价（$\Leftrightarrow$）
+
+$$
+设A,B是两个命题公式，若对于出现在A和B中的所有变元的任一组赋值，公式A和公式B的真值都相同\\
+则称公式A与B是逻辑等价(或称逻辑相等)，记作A\Leftrightarrow B
+$$
+
+> 注意区分“$\leftrightarrow$”和“$\Leftrightarrow$”：
+>
+> - “$\leftrightarrow$”是一种逻辑联结词，是一种`逻辑运算`，$A\leftrightarrow B$的结果仍然是一个命题公式
+> - “$\Leftrightarrow$”则是描述了两个命题公式A与B之间的一种`逻辑关系`，表示A与B是逻辑等价的，$A\Leftrightarrow B$的结果不是命题公式
+
+
+
+逻辑等价的命题公式A与B，构成的等价式$A\leftrightarrow B$，是重言式
+
+
+
+#### 基本的逻辑等价公式
+
+- 双重否定律：$A\Leftrightarrow \neg\neg A$
+-  幂等律：$A\Leftrightarrow A\vee A$，$A\Leftrightarrow A\wedge A $
+
+- 交换律：$A\vee B\Leftrightarrow B\vee A$，$A \wedge B\Leftrightarrow B \wedge A$
+- `结合律`：$(A\vee B)\vee C\Leftrightarrow A\vee(B\vee C)$，$(A\wedge B)\wedge C\Leftrightarrow A\wedge(B\wedge C)$
+- `分配律`：
+  - $\vee $对$\wedge $的分配律：$A\vee (B\wedge C)\Leftrightarrow (A\vee B)\wedge(A\vee C)$
+  - $\wedge $对$\vee $的分配律：$A\wedge (B\vee C)\Leftrightarrow (A\wedge B)\vee(A\wedge C)$
+
+- `德摩根律`：
+  - $\neg(A\vee B)\Leftrightarrow \neg A\wedge \neg B$
+  - $\neg(A\wedge B)\Leftrightarrow \neg A\vee \neg B$
+- `吸收律`：
+  - $A\vee(A\wedge B)\Leftrightarrow A$
+  - $A\wedge(A\vee B)\Leftrightarrow A$
+- 零律：
+  - $A\vee 1 \Leftrightarrow 1$
+  - $A\wedge 0 \Leftrightarrow 0$
+
+- 同一律：
+  - $A \wedge 1 \Leftrightarrow A$
+  - $A\vee 0 \Leftrightarrow A$
+
+- 排中律：$A\vee\neg A\Leftrightarrow1$
+- 矛盾律：$A\wedge\neg A\Leftrightarrow0$
+- `蕴涵律`：$A\rightarrow B\Leftrightarrow\neg A\vee B$
+- 等价律：$A\leftrightarrow B\Leftrightarrow(A\rightarrow B)\wedge(B\rightarrow A)$
+- 假言易位律：$A\rightarrow B\Leftrightarrow \neg B\rightarrow\neg A$
+
+- 等价否定律：$A\leftrightarrow B\Leftrightarrow \neg A\leftrightarrow\neg B$
+
+- 归谬律：$(A\rightarrow B)\wedge(A\rightarrow\neg B)\Leftrightarrow\neg A$
+
+
+
+关于吸收律的证明：
+$$
+P\wedge(P\vee Q)\Leftrightarrow(P\vee 0)\wedge(P\vee Q)\Leftrightarrow P\vee(0\wedge Q)\Leftrightarrow P\vee 0 \Leftrightarrow P
+$$
+
+#### 等价置换定理
+
+如果X是命题公式A的连续一部分，且X是一个命题公式，则可称X为A的==子公式==
+
+> eg：公式($\neg B\wedge C$)是公式($\neg A\wedge(\neg B \wedge C)$)的子公式
+
+ 
+
+==置换规则==定理：
+	设X是公式A的子公式，且$X\Leftrightarrow Y$，
+	若B是将A中的一处或多处出现的X以Y替换得到的，
+	则$A\Leftrightarrow B$
+
+证明如下：
+	欲证明$A\Leftrightarrow B$，即证$A\leftrightarrow B$是重言式
+	对于包含在A和B中的一切命题变元的任意一个赋值，A与B差别仅在于X出现的某些地方替换为了Y，由于$X\Leftrightarrow Y$,
+	那么对任意赋值X与Y的真值都相同，故A与B的取值也都相同，从而使得$A\leftrightarrow B$的真值为1。
+	又由于赋值的任意性，故$A\leftrightarrow B$的真值恒为1，即$A\leftrightarrow B$是重言式，所以$A\Leftrightarrow B$
+
+
+
+置换规则的应用：
+
+-   利用逻辑等价演算的方法，验证公式间的逻辑等价
+    $$
+    求证(P\rightarrow Q)\rightarrow R \Leftrightarrow (P\vee R)\wedge(\neg Q\vee R)\\
+    证明(从左侧开始)：\\
+    (P\rightarrow Q)\rightarrow R\\
+    \Leftrightarrow(\neg P \vee Q)\rightarrow R\ (蕴涵律)\\
+    \Leftrightarrow \neg(\neg P \vee Q)\vee R\ (蕴涵律)\\
+    \Leftrightarrow (P\wedge\neg Q)\vee R\ (德摩根律)\\
+    \Leftrightarrow (P\vee R)\wedge(\neg Q \vee R)\ (分配律)
+    $$
+
+-   利用逻辑等价演算，判断命题公式的类型（重言式、矛盾式、非重言可满足式）
+    能化简为与1逻辑等价的即为重言式；能化简为与0逻辑等价的即为矛盾式；否则即为非重言可满足式
+
+-   实际问题分析
+
+    ![image-20220314210537893](离散数学(北京科技大学 MOOC).assets/image-20220314210537893.png)
+
+	<img src="离散数学(北京科技大学 MOOC).assets/image-20220314210813436.png" alt="image-20220314210813436" style="zoom: 50%;" />
+
+	![image-20220314210937205](离散数学(北京科技大学 MOOC).assets/image-20220314210937205.png)
+	
+
+	![image-20220314211128447](离散数学(北京科技大学 MOOC).assets/image-20220314211128447.png)
+
+
+
+#### 逻辑蕴涵（$\Rightarrow$）
+
+设A、B是任意公式，若$A\rightarrow B$是重言式，则称==A蕴涵B，记作$A\Rightarrow B$==
+
+>   注意区分$\rightarrow $和$\Rightarrow$：
+>
+>   -   $\rightarrow $是一种逻辑联接词。$A\rightarrow B$是命题公式，其中$\rightarrow$是一种`逻辑运算`，其运算结果仍为命题公式
+>   -   而$\Rightarrow$则是描述了两个公式A与B之间的`关系`
+
+
+
+
+
+==定理==：设A、B为任意两个命题公式，$A\Leftrightarrow B$的充分必要条件是：$A\Rightarrow B$且$B\Rightarrow A$
+
+- 证明必要性（左边推出右边）：
+
+    因为$A\Leftrightarrow B$，则$A\leftrightarrow B$是重言式，又因为$A\leftrightarrow B \Leftrightarrow(A\rightarrow B)\wedge(B\rightarrow A)$，所以$(A\rightarrow B)$$与(B\rightarrow A)$均为重言式，因此$A\Rightarrow B$且$B\Rightarrow A$
+
+- 证明充分性：
+
+    因为$A\Rightarrow B$且$B\Rightarrow A$，故$(A\rightarrow B)$$与(B\rightarrow A)$均为重言式，又因为$A\leftrightarrow B \Leftrightarrow(A\rightarrow B)\wedge(B\rightarrow A)$，故$A\leftrightarrow B$是重言式，因此$A\Leftrightarrow B$
+
+
+
+#### 基本的逻辑蕴涵公式（称为推理定律）
+
+- 附加律：$A\Rightarrow (A\vee B)$
+
+- 化简律：$(A\wedge B)\Rightarrow A$
+
+- 假言推理：$(A\rightarrow B)\wedge A\Rightarrow B$
+
+- 拒取式：$(A\rightarrow B)\wedge\neg B\Rightarrow \neg A$
+
+- 析取三段论：$(A\vee B)\wedge\neg B\Rightarrow A$
+
+- 假言三段论：$(A\rightarrow B)\wedge(B\rightarrow C)\Rightarrow(A\rightarrow C)$
+
+- 等价三段论：
+
+    ![image-20220314213428920](离散数学(北京科技大学 MOOC).assets/image-20220314213428920.png)
+
+- 构造性二难：
+
+  ![image-20220314213446255](离散数学(北京科技大学 MOOC).assets/image-20220314213446255.png)
+
+- 破坏性二难：
+
+    ![image-20220314213512204](离散数学(北京科技大学 MOOC).assets/image-20220314213512204.png)
+
+> 特别的，前面的24条逻辑等价公式，都可以分别拆分为两条逻辑蕴涵公式
+
+
+
+逻辑蕴涵公式的应用：
+
+1. 验证公式间的逻辑等价关系
+2. 判断公式类型
+
+
+
+### 命题逻辑小结
+
+![image-20220314213824029](离散数学(北京科技大学 MOOC).assets/image-20220314213824029.png)
+
+对应的[复习梗概](https://www.icourse163.org/learn/USTB-1206407811?tid=1466983455#/learn/content?type=detail&id=1247261162&cid=1272931479)
+
+
+
+## 谓词逻辑
+
+
+
+
+
+
+
+
+
+# 集合论
+
+
+
+# 代数结构
+
+
+
+# 图论
