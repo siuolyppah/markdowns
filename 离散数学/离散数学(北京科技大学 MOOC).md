@@ -2,13 +2,13 @@
 
 课程重点：
 
-![https://s3.us-west-2.amazonaws.com/secure.notion-static.com/0e24ff47-a45c-4c04-9d3e-e81d3ebe4ac4/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45EIPT3X45%2F20220314%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220314T053748Z&X-Amz-Expires=86400&X-Amz-Signature=82902992fcdf3d022b08516cd3d94b6010de9b80d78c4b68b5c2ef91de70cb73&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22Untitled.png%22&x-id=GetObject](https://s3.us-west-2.amazonaws.com/secure.notion-static.com/0e24ff47-a45c-4c04-9d3e-e81d3ebe4ac4/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45EIPT3X45%2F20220314%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220314T053748Z&X-Amz-Expires=86400&X-Amz-Signature=82902992fcdf3d022b08516cd3d94b6010de9b80d78c4b68b5c2ef91de70cb73&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22Untitled.png%22&x-id=GetObject)
+![Untitled(10)](%E7%A6%BB%E6%95%A3%E6%95%B0%E5%AD%A6(%E5%8C%97%E4%BA%AC%E7%A7%91%E6%8A%80%E5%A4%A7%E5%AD%A6%20MOOC).assets/Untitled(10)-16474063810361.png)
 
 
 
 课程难点：
 
-![https://s3.us-west-2.amazonaws.com/secure.notion-static.com/07c17661-1127-4aab-9cb4-2d9d15209bc5/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45EIPT3X45%2F20220314%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220314T053431Z&X-Amz-Expires=86400&X-Amz-Signature=1b2e611878062c02acd023ba7fbb48d21557a8685e384ad336696bc26195515e&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22Untitled.png%22&x-id=GetObject](https://s3.us-west-2.amazonaws.com/secure.notion-static.com/07c17661-1127-4aab-9cb4-2d9d15209bc5/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45EIPT3X45%2F20220314%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220314T053431Z&X-Amz-Expires=86400&X-Amz-Signature=1b2e611878062c02acd023ba7fbb48d21557a8685e384ad336696bc26195515e&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22Untitled.png%22&x-id=GetObject)
+![Untitled(11)](%E7%A6%BB%E6%95%A3%E6%95%B0%E5%AD%A6(%E5%8C%97%E4%BA%AC%E7%A7%91%E6%8A%80%E5%A4%A7%E5%AD%A6%20MOOC).assets/Untitled(11).png)
 
 # 数理逻辑
 
@@ -832,6 +832,132 @@ $$
 ### 命题逻辑推理理论
 
 https://www.icourse163.org/learn/USTB-1206407811?tid=1466983455#/learn/content?type=detail&id=1247261165&cid=1272931496&replay=true
+
+> 本节核心概念：命题公式$A_1,A_2,\dots,A_k$推出B的推理是正确的，当且仅当$(A_1\wedge A_2\wedge \cdots\wedge A_k)\rightarrow B$是重言式
+
+
+
+#### 有效推理
+
+设$A_1,A_2,\dots,A_k$和B都为命题公式，若对于$A_1,A_2,\dots,A_k$和B中出现的命题变元的任意一组赋值，
+
+当$A_1\wedge A_2\wedge\dots\wedge A_k$为假(或$A_1\wedge A_2\wedge\dots\wedge A_k$为真)，B也为真，
+
+则称由前提$A_1,A_2,\dots,A_k$推出B的推理是有效的，并称B为==有效结论==。
+
+>即：只要不是前提为1，结论为0的情况，都是推理正确的情况
+
+
+
+特别的，可以将各个前提组成的集合记作为$\Gamma$，可将$\Gamma$推出B的推理记作$\Gamma\vdash B$。
+若此推理是正确的，可记为$\Gamma\models B$；否则可记为$\Gamma\nvDash B$。
+
+可称$\Gamma\vdash B$或$\{A_1,A_2,\dots,A_k\}\vdash B$为==推理的形式结构==。
+
+
+
+即命题公式$A_1,A_2,\dots,A_k$推出B的推理是正确的，当且仅当$(A_1\wedge A_2\wedge \cdots\wedge A_k)\rightarrow B$是重言式
+
+
+
+
+
+==判定推理是否有效的手段==：
+
+1. 真值表
+2. 逻辑等价演算
+3. 主合取（析取）范式
+4. 命题演算推证
+
+
+
+##### 命题演算推证
+
+命题演算退证，由三个要素组成：
+
+- 推理根据：为命题演算推证的命题定律和推理定律；即基本逻辑等价公式和逻辑蕴含式
+
+    - 命题定律用`E`表示
+    - 推理定律用`I`表示
+
+- 推理规则：
+
+    - 前提引入规则（P规则）：在推证的任何步骤上，都可以引入前提
+
+    - 结论引入规则（T规则）：在推证的任何步骤上所得到的结论，都可以作为后续证明的前提
+
+    - 附加前提规则（CP规则）：若从A和B能有效地推出C，则从A可有效地推出B$\rightarrow$C
+
+        > 此规则通常在结论为蕴含式时使用
+
+- 证明方法：
+
+    - 直接证明
+    - 间接证明：附加前提法、归谬法
+
+
+
+推证格式中包含：
+
+1. 步骤号
+2. 给定前提或得出的结论
+3. 推理时所用的规则和定律类型
+
+
+
+###### 推证格式的例子
+
+![image-20220316132240277](%E7%A6%BB%E6%95%A3%E6%95%B0%E5%AD%A6(%E5%8C%97%E4%BA%AC%E7%A7%91%E6%8A%80%E5%A4%A7%E5%AD%A6%20MOOC).assets/image-20220316132240277.png)
+
+
+
+
+
+###### 反证法
+
+在命题演算推证中，为例证明某个结论是某些前提的有效结论，可以先假设结论的否定成立，然后推出此假设与前提相矛盾。此类间接证法又称为反证法。
+
+
+
+定义：
+
+假设公式$A_1,A_2,\cdots,A_m$中的全体命题变元为$P_1,P_2,\cdots,P_n$。若存在某些赋值，使得$A_1\wedge A_2\wedge \cdots\wedge A_m$的真值为1，那么称公式$A_1\wedge A_2\wedge \cdots\wedge A_m$是可==相容==的；若对于任何赋值，其真值都为0，则称公式$A_1\wedge A_2\wedge \cdots\wedge A_m$是==不相容==的。
+
+
+
+定理：
+
+设命题公式集合$\{A_1,A_2,\cdots,A_m\}$是相容的，那么从$\{A_1,A_2,\cdots,A_m\}$出发可逻辑地推出结论B的充分必要是：从$\{A_1,A_2,\cdots,A_m,\neg B\}$可逻辑地推出一个矛盾式。
+
+
+
+例如：
+
+![image-20220316132920336](%E7%A6%BB%E6%95%A3%E6%95%B0%E5%AD%A6(%E5%8C%97%E4%BA%AC%E7%A7%91%E6%8A%80%E5%A4%A7%E5%AD%A6%20MOOC).assets/image-20220316132920336.png)
+
+
+
+
+
+###### 附加前提证法
+
+![image-20220316133204486](%E7%A6%BB%E6%95%A3%E6%95%B0%E5%AD%A6(%E5%8C%97%E4%BA%AC%E7%A7%91%E6%8A%80%E5%A4%A7%E5%AD%A6%20MOOC).assets/image-20220316133204486.png)
+
+![image-20220316133220335](%E7%A6%BB%E6%95%A3%E6%95%B0%E5%AD%A6(%E5%8C%97%E4%BA%AC%E7%A7%91%E6%8A%80%E5%A4%A7%E5%AD%A6%20MOOC).assets/image-20220316133220335.png)
+
+
+
+
+
+#### 命题逻辑推理小结
+
+- 若推理形式结构的符号化表示：$(A_1 \wedge A_2 \wedge \cdots \wedge A_k)\rightarrow B$是重言式，则推理是有效的，并记为$(A_1 \wedge A_2 \wedge \cdots \wedge A_k)\Rightarrow B$
+- 判断推理正确与否的方法有：真值表法、逻辑等价演算法、主析（合）取范式法、==命题演算推证==的证明法
+- 命题演算推证的证明中内含的证明方法有：直接证明法、间接证明法；间接证明法又包含归谬证明法和附加前提证明法
+
+
+
+<img src="%E7%A6%BB%E6%95%A3%E6%95%B0%E5%AD%A6(%E5%8C%97%E4%BA%AC%E7%A7%91%E6%8A%80%E5%A4%A7%E5%AD%A6%20MOOC).assets/image-20220316133417143.png" alt="image-20220316133417143" style="zoom:80%;" />
 
 
 
