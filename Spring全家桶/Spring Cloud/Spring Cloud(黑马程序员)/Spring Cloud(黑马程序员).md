@@ -46,3 +46,8 @@ SpringCloud集成了各种微服务功能组件，并基于SpringBoot实现了�
 
 [Docker](.\Docker.md)
 
+
+
+# 服务异步通信RabbitMQ
+
+https://www.bilibili.com/video/BV1LQ4y127n4?p=62
