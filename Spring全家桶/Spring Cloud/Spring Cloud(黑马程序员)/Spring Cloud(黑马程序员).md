@@ -50,4 +50,6 @@ SpringCloud集成了各种微服务功能组件，并基于SpringBoot实现了�
 
 # 服务异步通信RabbitMQ
 
+[RabbitMQ](RabbitMQ.md)
+
 https://www.bilibili.com/video/BV1LQ4y127n4?p=62
