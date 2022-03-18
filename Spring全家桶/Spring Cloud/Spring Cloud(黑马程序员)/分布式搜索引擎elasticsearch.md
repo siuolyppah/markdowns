@@ -1177,3 +1177,11 @@ void testBulkRequest() throws IOException {
 - 准备参数（Index、Update、Bulk时需要）
 - 发送请求。调用RestHighLevelClient#.xxx()方法，xxx是index、get、update、delete、bulk
 - 解析结果（Get时需要）
+
+
+
+
+
+# ES搜索功能
+
+https://www.bilibili.com/video/BV1LQ4y127n4?p=100
