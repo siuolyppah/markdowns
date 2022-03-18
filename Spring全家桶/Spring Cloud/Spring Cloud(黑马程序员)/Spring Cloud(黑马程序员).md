@@ -54,6 +54,6 @@ SpringCloud集成了各种微服务功能组件，并基于SpringBoot实现了�
 
 
 
-# 分布式搜索（elasticsearch）
+# 分布式搜索引擎（elasticsearch）
 
-[elasticsearch](elasticsearch.md)
+[elasticsearch](分布式搜索引擎elasticsearch.md)
