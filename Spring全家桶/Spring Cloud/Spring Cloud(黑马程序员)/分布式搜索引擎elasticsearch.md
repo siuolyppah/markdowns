@@ -1182,6 +1182,69 @@ void testBulkRequest() throws IOException {
 
 
 
-# ES搜索功能
+# DSL查询文档
 
-https://www.bilibili.com/video/BV1LQ4y127n4?p=100
+elasticsearch的查询依然是基于JSON风格的DSL来实现的。
+
+
+
+## DSL查询分类
+
+Elasticsearch提供了基于JSON的DSL（[Domain Specific Language](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl.html)）来定义查询。常见的查询类型包括：
+
+- **查询所有**：查询出所有数据，一般测试用。例如：match_all
+
+- **全文检索（full text）查询**：利用分词器对用户输入内容分词，然后去倒排索引库中匹配。例如：
+    - match_query
+    - multi_match_query
+- **精确查询**：根据精确词条值查找数据，一般是查找keyword、数值、日期、boolean等类型字段。例如：
+    - ids
+    - range
+    - term
+- **地理（geo）查询**：根据经纬度查询。例如：
+    - geo_distance
+    - geo_bounding_box
+- **复合（compound）查询**：复合查询可以将上述各种查询条件组合起来，合并查询条件。例如：
+    - bool
+    - function_score
+
+
+
+查询的语法基本一致：
+
+```json
+GET /indexName/_search
+{
+  "query": {
+    "查询类型": {
+      "查询条件": "条件值"
+    }
+  }
+}
+```
+
+
+
+以查询所有为例，其中：
+
+- 查询类型为match_all
+- 没有查询条件
+
+```json
+// 查询所有
+GET /indexName/_search
+{
+  "query": {
+    "match_all": {
+    }
+  }
+}
+```
+
+其它查询无非就是**查询类型**、**查询条件**的变化。
+
+
+
+## 全文检索查询
+
+https://www.bilibili.com/video/BV1LQ4y127n4?p=102
