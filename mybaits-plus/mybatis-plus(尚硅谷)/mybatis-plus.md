@@ -200,6 +200,33 @@ mybatis-plus:
 
 
 
+## 总结
+
+- 基于BaseMapper\<T>接口提供的基本查询方法，及通过反射生成的实现类(启动类标注`@MapperScan()`注解)，即可完成基本的数据库操作。
+
+- 特别的，Mybatis-plus提供了`ServiceImpl<M extends BaseMapper<T>, T> implements IService<T>`类，用它就可以提供基本的业务操作。
+
+    > 如ServiceImpl<UserMapper, User>
+
+    但在开发中，业务层往往有自定义的操作，往往有如下形式的代码结构：
+
+    ```java
+    public interface UserService extends IService<User> {
+        
+    }
+    ```
+
+    ```java
+    @Service
+    public class UserServiceImpl  extends ServiceImpl<UserMapper, User> implements UserService {
+    
+    }
+    ```
+
+    
+
+    
+
 # BaseMapper\<T>接口
 
 ## 新增功能
@@ -826,4 +853,860 @@ public class User {
 
 # 条件构造器Wrapper
 
-https://www.bilibili.com/video/BV12R4y157Be?p=29&spm_id_from=pageDriver
+## Wrapper介绍
+
+![image-20220322171443141](mybatis-plus.assets/image-20220322171443141.png)
+
+
+
+Wrapper：条件构造抽象类
+
+- AbstractWrapper：用于封装查询条件，生成SQL的WHERE条件
+    - QueryWrapper：封装查询条件
+    - UpdateWrapper：封装Update条件
+    - AbstractLambdaWrapper：使用Lambda语法
+        - LambdaQueryWrapper：用Lambda语法封装查询条件
+        - LambdaUpdateWrapper：用Lambda语法封装Update条件
+
+
+
+## QueryMapper\<T>接口(查询、删除)
+
+>QueryMapper主要用于查询和删除功能。修改功能也可以使用
+
+
+
+### 例：组装查询条件
+
+```java
+@SpringBootTest
+public class WrapperTest {
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Test
+    public void test1(){
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+
+        queryWrapper.like("name","a")
+                .between("age",20,30)
+                .isNotNull("email");
+
+        List<User> users = userMapper.selectList(queryWrapper);
+        users.forEach(System.out::println);
+    }
+}
+```
+
+
+
+### 例：组装排序条件
+
+```java
+@SpringBootTest
+public class WrapperTest {
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Test
+    public void test02() {
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+
+        //按年龄降序；年龄相同者，按id升序
+        queryWrapper.orderByDesc("age")
+                .orderByAsc("id");
+
+        List<User> users = userMapper.selectList(queryWrapper);
+        users.forEach(System.out::println);
+    }
+}
+```
+
+
+
+### 例：组装删除条件
+
+```java
+@SpringBootTest
+public class WrapperTest {
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Test
+    public void test03(){
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.isNull("email");
+
+        int delete = userMapper.delete(queryWrapper);
+        System.out.println("影响行数："+delete);
+    }
+}
+```
+
+
+
+### 在Update中使用QueryMapper
+
+```java
+@SpringBootTest
+public class WrapperTest {
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Test
+    public void test04(){
+        //修改 年龄大于20且用户名包含a 或 邮箱为null 的用户信息
+
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.gt("age",20)
+            .like("name","a")
+            .or()
+            .isNull("email");
+
+        User u = new User();
+        u.setName("xiaoming123");
+
+        //UPDATE user SET name=? WHERE (age > ? AND name LIKE ? OR email IS NULL)
+        userMapper.update(u,queryWrapper);
+    }
+}
+```
+
+
+
+### 优先级问题
+
+```java
+@SpringBootTest
+public class WrapperTest {
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Test
+    public void test05(){
+        //修改 年龄大于20 且 用户名包含a或邮箱为null 的用户信息
+
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.gt("age", 20)
+                .and(wrapper -> wrapper.like("name", "a")
+                        .isNull("email"));
+
+        User u = new User();
+        u.setName("xiaoming123");
+
+        //UPDATE user SET name=? WHERE (age > ? AND (name LIKE ? AND email IS NULL))
+        userMapper.update(u,queryWrapper);
+    }
+}
+```
+
+> 链式编程时，默认用and进行连接。
+>
+> 当想让or条件优先时，需要提供lamda表达式。
+
+
+
+```java
+public interface Nested<Param, Children> extends Serializable {
+
+	//泛型 Param 是具体需要运行函数的类(也是 wrapper 的子类)
+    default Children and(Consumer<Param> consumer) {
+        return and(true, consumer);
+    }
+}
+```
+
+
+
+### 组装查询字段
+
+```java
+@SpringBootTest
+public class WrapperTest {
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Test
+    public void test06(){
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+
+        queryWrapper.select("name","email");
+        //SELECT name,email FROM user
+        List<Map<String, Object>> maps = userMapper.selectMaps(queryWrapper);
+
+        maps.forEach(System.out::println);
+    }
+}
+```
+
+
+
+### 组装子查询
+
+```java
+@SpringBootTest
+public class WrapperTest {
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Test
+    public void test07(){
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+
+        queryWrapper.inSql("id","SELECT id FROM user WHERE id<=100");
+        //SELECT id,name,age,email,is_deleted FROM user WHERE (id IN (SELECT id FROM user WHERE id<=100))
+        List<User> users = userMapper.selectList(queryWrapper);
+        users.forEach(System.out::println);
+    }
+}
+```
+
+
+
+## UpdateMapper\<T>接口
+
+```java
+@SpringBootTest
+public class WrapperTest {
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Test
+    public void test08(){
+        UpdateWrapper<User> updateWrapper = new UpdateWrapper<>();
+
+        updateWrapper.set("name","xiaohong123");
+        updateWrapper.like("name","a");
+
+        //UPDATE user SET name=? WHERE (name LIKE ?)
+        int update = userMapper.update(null, updateWrapper);
+    }
+}
+```
+
+
+
+> 注意与[使用QueryWrapper进行更新](#在Update中使用QueryMapper)操作相对比。
+>
+> ```java
+> int update(@Param(Constants.ENTITY) T entity, @Param(Constants.WRAPPER) Wrapper<T> updateWrapper);
+> ```
+>
+> - 使用QueryWrapper时：entity不应为null
+> - 使用UpdateWrapper时：entity可以为null
+
+
+
+## condition
+
+在真正开发的过程中，组装条件是常见的功能，而这些条件数据来源于用户输入，是可选的，因此我们在组装这些条件时，必须先判断用户是否选择了这些条件：
+
+- 若选择则需要组装该条件
+- 若没有选择则不进行组装
+
+
+
+```java
+@SpringBootTest
+public class WrapperTest {
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Test
+    public void test09() {
+        String username = null;
+        Integer ageBegin = 10;
+        Integer ageEnd = 24;
+
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.like(StringUtils.isNotBlank(username),"username","a")
+                .ge(ageBegin != null,"age",ageBegin)
+                .le(ageEnd != null ,"age", ageEnd);
+
+        List<User> users = userMapper.selectList(queryWrapper);
+    }
+}
+```
+
+
+
+## LambdaQueryWrapper\<T>接口
+
+```java
+@SpringBootTest
+public class WrapperTest {
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Test
+    public void test10(){
+        String username = null;
+        Integer ageBegin = 10;
+        Integer ageEnd = 24;
+
+        LambdaQueryWrapper<User> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+        lambdaQueryWrapper.like(StringUtils.isNotBlank(username), User::getName, username)
+                .ge(ageBegin != null, User::getAge,ageBegin)
+                .le(ageEnd != null, User::getAge,ageEnd);
+
+        //SELECT id,name,age,email,is_deleted FROM user WHERE (age >= ? AND age <= ?)
+        List<User> users = userMapper.selectList(lambdaQueryWrapper);
+        users.forEach(System.out::println);
+    }
+}
+```
+
+> 主要用于：防止字段名写错
+
+
+
+原理：
+
+```java
+import java.io.Serializable;
+import java.lang.invoke.SerializedLambda;
+import java.lang.reflect.Method;
+import java.util.function.Function;
+
+public class LambdaTest {
+    @FunctionalInterface
+    interface MFunction<T, R> extends Function<T, R>, Serializable {
+    }
+
+    private static <T, R> SerializedLambda doSFunction(MFunction<T, R> func) throws Exception {
+        // 直接调用writeReplace
+        Method writeReplace = func.getClass().getDeclaredMethod("writeReplace");
+        writeReplace.setAccessible(true);
+        //反射调用
+        Object sl = writeReplace.invoke(func);
+        return (SerializedLambda) sl;
+    }
+
+
+    public static void main(String[] args) throws Exception {
+        SerializedLambda serializedLambda = doSFunction(User::getId);
+
+        System.out.println("方法名：" + serializedLambda.getImplMethodName());
+        System.out.println("类名：" + serializedLambda.getImplClass());
+    }
+}
+```
+
+
+
+## LambdaUpdateWrapper\<T>接口
+
+```java
+@SpringBootTest
+public class WrapperTest {
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Test
+    public void test11() {
+        String username = "a";
+        Integer ageBegin = 10;
+        Integer ageEnd = 24;
+        
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper
+                .like(StringUtils.isNotBlank(username), User::getName, username)
+                .ge(ageBegin != null, User::getAge, ageBegin)
+                .le(ageEnd != null, User::getAge, ageEnd);
+        
+        List<User> users = userMapper.selectList(queryWrapper);
+        users.forEach(System.out::println);
+    }
+}
+```
+
+
+
+# 插件
+
+## 分页插件
+
+>MyBatis Plus自带分页插件，只要简单的配置即可实现分页功能
+
+
+
+### 基本使用
+
+步骤如下：
+
+1. 添加配置类
+
+    ```java
+    import com.baomidou.mybatisplus.annotation.DbType;
+    import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+    import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+    import org.mybatis.spring.annotation.MapperScan;
+    import org.springframework.context.annotation.Bean;
+    import org.springframework.context.annotation.Configuration;
+    
+    @Configuration
+    @MapperScan("com.example.mybatisplus.mapper")
+    public class MybatisConfig {
+        @Bean
+        public MybatisPlusInterceptor mybatisPlusInterceptor(){
+            MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+            interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
+    
+            return interceptor;
+        }
+    }
+    ```
+
+2. 测试
+
+    ```java
+    @SpringBootTest
+    public class MybatisPluginTest {
+    
+        @Autowired
+        UserMapper userMapper;
+    
+        @Test
+        public void testPage() {
+            Page<User> page = new Page<>(2,3);//当前页页码，每页显示记录条数
+    
+            //SELECT id,name,age,email,is_deleted FROM user LIMIT ?,?
+            userMapper.selectPage(page, null);
+    
+            List<User> records = page.getRecords();
+            records.forEach(System.out::println);
+        }
+    }
+    ```
+
+    
+
+
+
+### XML自定义
+
+步骤如下：
+
+1. 在Mapper接口中的定义方法：
+
+    ```java
+    @Repository
+    public interface UserMapper extends BaseMapper<User> {
+    
+        Page<User> selectPageVo(@Param("page") Page<User> page, @Param("age") Integer age);    
+    }
+    ```
+
+    > 注意：
+    >
+    > - 方法的返回值必须是Page<T>
+    > - 方法的第一个参数必须是Page<T>
+
+2. 在相应的XML映射文件中实现方法：
+
+    ```xml
+    <?xml version="1.0" encoding="utf-8" ?>
+    <!DOCTYPE mapper
+            PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+            "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+    <mapper namespace="com.example.mybatisplus.mapper.UserMapper">
+    
+        <!--此处使用类型别名-->
+        <select id="selectPageVo" resultType="User">
+            SELECT * from user where age > #{age}
+        </select>
+    </mapper>
+    ```
+
+3. 测试：
+
+    ```java
+    @SpringBootTest
+    public class MybatisPluginTest {
+    
+        @Autowired
+        UserMapper userMapper;
+    
+        @Test
+        public void testXMLPage(){
+            Page<User> page = new Page<>(2,3);
+    
+            userMapper.selectPageVo(page, 18);
+            
+            List<User> records = page.getRecords();
+            records.forEach(System.out::println);
+        }
+    }
+    ```
+
+    
+
+
+
+## 乐观锁插件
+
+- 情景：
+
+    一件商品，成本价是80元，售价是100元。
+
+    老板先通知小李，让其将价格增加50元。
+
+    后通知小王，让其将价格降低30元。
+
+- 可能出现的问题：
+
+    小李和小王同时查询数据库，得到价格为100元。
+
+    小李先将价格设置为150元；但小王的将价格覆盖为70元。
+
+    ```java
+    @SpringBootTest
+    public class ProductTest {
+    
+        @Autowired
+        ProductMapper productMapper;
+    
+        @Test
+        public void test(){
+            Product product_A = productMapper.selectById(1L);//100
+            Product product_B = productMapper.selectById(1L);//100
+    
+            product_A.setPrice(product_A.getPrice()+50);//150
+            product_B.setPrice(product_B.getPrice()-30);//70
+    
+            productMapper.updateById(product_A);//150
+            productMapper.updateById(product_B);//70
+        }
+    }
+    ```
+
+
+
+基于乐观锁的解决方案：
+
+1. 为JavaBean的相应属性，添加`@Version`注解
+
+    ```java
+    @Data
+    @TableName("t_product")
+    public class Product {
+        private Long id;
+        private String name;
+        private Integer price;
+        
+        @Version
+        private Integer version;
+    }
+    ```
+
+2. 配置乐观锁插件
+
+    ```java
+    @Configuration
+    @MapperScan("com.example.mybatisplus.mapper")
+    public class MybatisConfig {
+        @Bean
+        public MybatisPlusInterceptor mybatisPlusInterceptor(){
+            MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+    
+            interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
+            return interceptor;
+        }
+    }
+    
+    ```
+
+3.  测试
+
+    ```java
+    @SpringBootTest
+    public class ProductTest {
+    
+        @Autowired
+        ProductMapper productMapper;
+    
+        @Test
+        public void testOptimistic(){
+            Product product_A = productMapper.selectById(1L);
+            Product product_B = productMapper.selectById(1L);
+    
+            product_A.setPrice(product_A.getPrice()+50);
+            product_B.setPrice(product_A.getPrice()-30);
+    
+            productMapper.updateById(product_A);
+            int result = productMapper.updateById(product_B);
+    
+            while (result==0){
+                Product product_new = productMapper.selectById(1L);
+                product_new.setPrice(product_B.getPrice());
+                result = productMapper.updateById(product_new);
+            }
+        }
+    }
+    ```
+
+    
+
+
+
+# 通用枚举
+
+> 数据库中可能出现某些字段，其取值是可以被枚举的。因此往往在Java代码中对应着枚举类型。
+
+1. 在数据库的数据表中，添加int型字段sex
+
+2. 创建枚举类型，并在相应字段添加`@EnumValue`注解
+
+    ```java
+    @Getter
+    public enum SexEnum {
+        MALE(1,"男"),
+        FEMALE(2,"女");
+    
+    
+        @EnumValue
+        private Integer sex;
+        private String sexName;
+    
+        SexEnum(Integer sex, String sexName) {
+            this.sex = sex;
+            this.sexName = sexName;
+        }
+    }
+    ```
+
+3. 配置扫描通用枚举
+
+    ```yaml
+    mybatis-plus:
+      type-enums-package: com.example.mybatisplus.enums
+    ```
+
+4. 测试：
+
+    ```java
+    @SpringBootTest
+    public class SexEnumTest {
+    
+        @Autowired
+        UserMapper userMapper;
+    
+        @Test
+        public void test(){
+            User u = new User();
+    
+            u.setName("xiaowang");
+            u.setAge(19);
+            u.setSex(SexEnum.MALE);
+    
+            userMapper.insert(u);
+        }
+    }
+    ```
+
+    
+
+
+
+# 代码生成器
+
+1. 引入依赖：
+
+    ```xml
+    <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-generator</artifactId>
+        <version>3.5.1</version>
+    </dependency>
+    <dependency>
+        <groupId>org.freemarker</groupId>
+        <artifactId>freemarker</artifactId>
+        <version>2.3.31</version>
+    </dependency>
+    ```
+
+2. 生成代码：
+
+    - 快速生成：
+
+        ```java
+        FastAutoGenerator.create("url", "username", "password")
+            .globalConfig(builder -> {
+                builder.author("baomidou") // 设置作者
+                    .enableSwagger() // 开启 swagger 模式
+                    .fileOverride() // 覆盖已生成文件
+                    .outputDir("D://"); // 指定输出目录
+            })
+            .packageConfig(builder -> {
+                builder.parent("com.baomidou.mybatisplus.samples.generator") // 设置父包名
+                    .moduleName("system") // 设置父包模块名
+                    .pathInfo(Collections.singletonMap(OutputFile.mapperXml, "D://")); // 设置mapperXml生成路径
+            })
+            .strategyConfig(builder -> {
+                builder.addInclude("t_simple") // 设置需要生成的表名
+                    .addTablePrefix("t_", "c_"); // 设置过滤表前缀
+            })
+            .templateEngine(new FreemarkerTemplateEngine()) // 使用Freemarker引擎模板，默认的是Velocity引擎模板
+            .execute();
+        ```
+
+    - 交互式生成：
+
+        ```java
+        FastAutoGenerator.create(DATA_SOURCE_CONFIG)
+            // 全局配置
+            .globalConfig((scanner, builder) -> builder.author(scanner.apply("请输入作者名称？")).fileOverride())
+            // 包配置
+            .packageConfig((scanner, builder) -> builder.parent(scanner.apply("请输入包名？")))
+            // 策略配置
+            .strategyConfig((scanner, builder) -> builder.addInclude(getTables(scanner.apply("请输入表名，多个英文逗号分隔？所有输入 all")))
+                                .controllerBuilder().enableRestStyle().enableHyphenStyle()
+                                .entityBuilder().enableLombok().addTableFills(
+                                        new Column("create_time", FieldFill.INSERT)
+                                ).build())
+            /*
+                模板引擎配置，默认 Velocity 可选模板引擎 Beetl 或 Freemarker
+               .templateEngine(new BeetlTemplateEngine())
+               .templateEngine(new FreemarkerTemplateEngine())
+             */
+            .execute();
+        
+        
+        // 处理 all 情况
+        protected static List<String> getTables(String tables) {
+            return "all".equals(tables) ? Collections.emptyList() : Arrays.asList(tables.split(","));
+        }
+        ```
+
+        
+
+# 多数据源
+
+场景：
+
+- 多数据库
+- 读写分离
+- 一主多从
+- 混合模式
+
+
+
+Demo结构：
+
+- mybatis_plus数据库：有数据表user
+- mybatis_plus_1数据库：有数据表product
+
+
+
+步骤：
+
+1. 引入依赖
+
+    ```xml
+    <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>dynamic-datasource-spring-boot-starter</artifactId>
+        <version>3.5.0</version>
+    </dependency>
+    ```
+
+2. 配置多数据源信息：
+
+    ```yaml
+    spring:
+      datasource:
+        dynamic:
+          primary: master
+          strict: false #严格模式下，若未匹配到数据源将抛出异常
+          datasource:
+            master:
+              driver-class-name: com.mysql.cj.jdbc.Driver
+              url: jdbc:mysql://localhost:3306/mybatis_plus?characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8
+              username: root
+              password: gg12138.
+            slave_1:
+              driver-class-name: com.mysql.cj.jdbc.Driver
+              url: jdbc:mysql://localhost:3306/mybatis_plus_1?characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8
+              username: root
+              password: gg12138.
+    ```
+
+3. 编写service层代码，并==在类或方法上==添加`@DS`注解指定数据源
+
+    ```java
+    public interface UserService extends IService<User> {
+    }
+    
+    @DS("master")
+    @Service
+    public class UserServiceImpl  extends ServiceImpl<UserMapper, User> implements UserService {
+    }
+    ```
+
+    ```java
+    public interface ProductService extends IService<Product> {
+    }
+    
+    @DS("slave_1")
+    @Service
+    public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> implements ProductService {
+    }
+    ```
+
+4. 测试：
+
+    ```java
+    @SpringBootTest
+    public class DynamicDatasourceTest {
+    
+        @Autowired
+        private UserService userService;
+    
+        @Autowired
+        private ProductService productService;
+    
+        @Test
+        public void test(){
+            User user = userService.getById(1L);
+            Product product = productService.getById(1L);
+    
+            System.out.println(user);
+            System.out.println(product);
+        }
+    }
+    ```
+
+    
+
+# MyBatisX插件
+
+MyBatis-Plus为我们提供了强大的mapper和service模板，能够大大的提高开发效率
+
+但是在真正开发过程中，MyBatis-Plus并不能为我们解决所有问题，例如一些复杂的SQL，多表
+联查，我们就需要自己去编写代码和SQL语句，我们该如何快速的解决这个问题呢，这个时候可
+以使用MyBatisX插件
+
+MyBatisX一款基于 IDEA 的快速开发插件，为效率而生。
+
+
+
+MyBatisX插件用法：https://baomidou.com/pages/ba5b24
+
+提供的功能，包括但不限制于：
+
+- 关联Mapper接口与对应的Mapper映射文件
+
+- 图形化的MBG界面
+
+    

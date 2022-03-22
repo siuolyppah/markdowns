@@ -1247,4 +1247,841 @@ GET /indexName/_search
 
 ## 全文检索查询
 
-https://www.bilibili.com/video/BV1LQ4y127n4?p=102
+### 检索流程
+
+全文检索查询的基本流程如下：
+
+1. 对用户搜索的内容做分词，得到词条
+2. 根据词条去倒排索引库中匹配，得到文档id
+3. 根据文档id找到文档，返回给用户
+
+>因为是拿着词条去匹配，因此参与搜索的字段也必须是可分词的text类型的字段。
+>
+
+
+
+### 基本语法
+
+常见的全文检索查询包括：
+
+- match查询：==单字段查询==
+
+    ```json
+    GET /indexName/_search
+    {
+      "query": {
+        "match": {
+          "FIELD": "TEXT"
+        }
+      }
+    }
+    ```
+
+- multi_match查询：==多字段查询==，任意一个字段符合条件就算符合查询条件
+
+    ```json
+    GET /indexName/_search
+    {
+      "query": {
+        "multi_match": {
+          "query": "TEXT",
+          "fields": ["FIELD1", " FIELD12"]
+        }
+      }
+    }
+    ```
+
+    > 但是，搜索字段越多，对查询性能影响越大，因此建议采用copy_to，从而使用单字段查询。
+
+
+
+### 示例
+
+- match查询：
+
+    ```json
+    GET /hotel/_search
+    {
+      "query": {
+        "match": {
+          "all": "如家酒店"
+        }
+      }
+    }
+    ```
+
+- multi_match查询：
+
+    ```json
+    GET /hotel/_search
+    {
+      "query": {
+        "multi_match": {
+          "query": "如家酒店",
+          "fields": ["brand","name","business"];
+        }
+      }
+    }
+    ```
+
+    
+
+
+
+## 精准查询
+
+精确查询一般是查找keyword、数值、日期、boolean等类型字段。所以**不会**对搜索条件分词。常见的有：
+
+- term：根据词条精确值查询
+- range：根据值的范围查询
+
+
+
+### term查询
+
+语法说明：
+
+```json
+// term查询
+GET /indexName/_search
+{
+  "query": {
+    "term": {
+      "FIELD": {
+        "value": "VALUE"
+      }
+    }
+  }
+}
+```
+
+
+
+### range查询
+
+基本语法：
+
+```json
+// range查询
+GET /indexName/_search
+{
+  "query": {
+    "range": {
+      "FIELD": {
+        "gte": 10, // 这里的gte代表大于等于，gt则代表大于
+        "lte": 20 // lte代表小于等于，lt则代表小于
+      }
+    }
+  }
+}
+```
+
+
+
+## 地理坐标查询
+
+### 矩形范围查询
+
+矩形范围查询，也就是geo_bounding_box查询，查询坐标落在某个矩形范围的所有文档：
+
+![DKV9HZbVS6](file://E:\BaiduNetdiskDownload\1%E3%80%81%E5%BE%AE%E6%9C%8D%E5%8A%A1%E5%BC%80%E5%8F%91%E6%A1%86%E6%9E%B6SpringCloud+RabbitMQ+Docker+Redis+%E6%90%9C%E7%B4%A2+%E5%88%86%E5%B8%83%E5%BC%8F%E5%8F%B2%E4%B8%8A%E6%9C%80%E5%85%A8%E9%9D%A2%E7%9A%84%E5%BE%AE%E6%9C%8D%E5%8A%A1%E5%85%A8%E6%8A%80%E6%9C%AF%E6%A0%88%E8%AF%BE%E7%A8%8B\%E5%AE%9E%E7%94%A8%E7%AF%87\%E5%AD%A6%E4%B9%A0%E8%B5%84%E6%96%99\day06-Elasticsearch02\%E8%AE%B2%E4%B9%89\assets\DKV9HZbVS6.gif?lastModify=1647930781)
+
+查询时，需要指定矩形的**左上**、**右下**两个点的坐标，然后画出一个矩形，落在该矩形内的都是符合条件的点。
+
+
+
+语法如下：
+
+```json
+// geo_bounding_box查询
+GET /indexName/_search
+{
+  "query": {
+    "geo_bounding_box": {
+      "FIELD": {
+        "top_left": { // 左上点
+          "lat": 31.1,
+          "lon": 121.5
+        },
+        "bottom_right": { // 右下点
+          "lat": 30.9,
+          "lon": 121.7
+        }
+      }
+    }
+  }
+}
+```
+
+
+
+### 附近查询
+
+附近查询，也叫做距离查询（geo_distance）：查询到指定中心点小于某个距离值的所有文档。
+
+![vZrdKAh19C](file://E:\BaiduNetdiskDownload\1%E3%80%81%E5%BE%AE%E6%9C%8D%E5%8A%A1%E5%BC%80%E5%8F%91%E6%A1%86%E6%9E%B6SpringCloud+RabbitMQ+Docker+Redis+%E6%90%9C%E7%B4%A2+%E5%88%86%E5%B8%83%E5%BC%8F%E5%8F%B2%E4%B8%8A%E6%9C%80%E5%85%A8%E9%9D%A2%E7%9A%84%E5%BE%AE%E6%9C%8D%E5%8A%A1%E5%85%A8%E6%8A%80%E6%9C%AF%E6%A0%88%E8%AF%BE%E7%A8%8B\%E5%AE%9E%E7%94%A8%E7%AF%87\%E5%AD%A6%E4%B9%A0%E8%B5%84%E6%96%99\day06-Elasticsearch02\%E8%AE%B2%E4%B9%89\assets\vZrdKAh19C.gif?lastModify=1647930811)
+
+
+
+语法说明：
+
+```json
+// geo_distance 查询
+GET /indexName/_search
+{
+  "query": {
+    "geo_distance": {
+      "distance": "15km", // 半径
+      "FIELD": "31.21,121.5" // 圆心
+    }
+  }
+}
+```
+
+
+
+## 复合查询
+
+复合（compound）查询：复合查询可以将其它简单查询组合起来，实现更复杂的搜索逻辑。常见的有两种：
+
+- fuction score：算分函数查询，可以控制文档相关性算分，控制文档排名
+- bool query：布尔查询，利用逻辑关系组合多个其它的查询，实现复杂搜索
+
+
+
+### 相关性算分的算法
+
+当我们利用match查询时，文档结果会根据与搜索词条的关联度打分（_score），返回结果时按照分值降序排列。
+
+
+
+在elasticsearch中，早期使用的打分算法是TF-IDF算法，公式如下：
+
+![image-20220322143445261](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220322143445261.png)
+
+在后来的5.1版本升级中，elasticsearch将算法改进为BM25算法，公式如下：
+
+![image-20220322143452416](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220322143452416.png)
+
+
+
+TF-IDF算法有一个缺陷，就是词条频率越高，文档得分也会越高，单个词条对文档影响较大。而BM25则会让单个词条的算分有一个上限，曲线更加平滑：
+
+![image-20220322143501143](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220322143501143.png)
+
+
+
+### 算分函数查询
+
+#### 语法说明
+
+![image-20220322143559609](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220322143559609.png)
+
+function score 查询中包含四部分内容：
+
+- **原始查询**条件：query部分，基于这个条件搜索文档，并且基于BM25算法给文档打分，**原始算分**（query score)
+- **过滤条件**：filter部分，符合该条件的文档才会重新算分
+- **算分函数**：符合filter条件的文档要根据这个函数做运算，得到的**函数算分**（function score），有四种函数
+    - weight：函数结果是常量
+    - field_value_factor：以文档中的某个字段值作为函数结果
+    - random_score：以随机数作为函数结果
+    - script_score：自定义算分函数算法
+- **运算模式**：算分函数的结果、原始查询的相关性算分，两者之间的运算方式，包括：
+    - multiply：相乘
+    - replace：用function score替换query score
+    - 其它，例如：sum、avg、max、min
+
+
+
+function score的运行流程如下：
+
+- 1）根据**原始条件**查询搜索文档，并且计算相关性算分，称为**原始算分**（query score）
+- 2）根据**过滤条件**，过滤文档
+- 3）符合**过滤条件**的文档，基于**算分函数**运算，得到**函数算分**（function score）
+- 4）将**原始算分**（query score）和**函数算分**（function score）基于**运算模式**做运算，得到最终结果，作为相关性算分。
+
+>- 过滤条件：决定哪些文档的算分被修改
+>- 算分函数：决定函数算分的算法
+>- 运算模式：决定最终算分结果
+
+
+
+#### 示例
+
+```json
+GET /hotel/_search
+{
+  "query": {
+    "function_score": {
+      "query": {  .... }, // 原始查询，可以是任意条件
+      "functions": [ // 算分函数
+        {
+          "filter": { // 满足的条件，品牌必须是如家
+            "term": {
+              "brand": "如家"
+            }
+          },
+          "weight": 2 // 算分权重为2
+        }
+      ],
+      "boost_mode": "sum" // 加权模式，求和
+    }
+  }
+}
+```
+
+- 原始条件：不确定，可以任意变化
+- 过滤条件：brand = "如家"
+- 算分函数：可以简单粗暴，直接给固定的算分结果，weight
+- 运算模式：比如求和
+
+
+
+### 布尔查询
+
+布尔查询是一个或多个查询子句的组合，每一个子句就是一个**子查询**。子查询的组合方式有：
+
+- must：必须匹配每个子查询，类似“与”
+- should：选择性匹配子查询，类似“或”
+- must_not：必须不匹配，**不参与算分**，类似“非”
+- filter：必须匹配，**不参与算分**
+
+> 在搜索时，参与**打分的字段越多，查询的性能也越差**
+
+
+
+#### 语法示例
+
+```json
+GET /hotel/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"term": {"city": "上海" }}
+      ],
+      "should": [
+        {"term": {"brand": "皇冠假日" }},
+        {"term": {"brand": "华美达" }}
+      ],
+      "must_not": [
+        { "range": { "price": { "lte": 500 } }}
+      ],
+      "filter": [
+        { "range": {"score": { "gte": 45 } }}
+      ]
+    }
+  }
+}
+```
+
+
+
+# 搜索结果处理
+
+## 排序
+
+elasticsearch默认是根据相关度算分（_score）来排序，但是也支持自定义方式对搜索[结果排序](https://www.elastic.co/guide/en/elasticsearch/reference/current/sort-search-results.html)。可以排序字段类型有：keyword类型、数值类型、地理坐标类型、日期类型等。
+
+
+
+### 普通字段排序
+
+keyword、数值、日期类型排序的语法基本一致。
+
+**语法**：
+
+```json
+GET /indexName/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "sort": [
+    {
+      "FIELD": "desc"  // 排序字段、排序方式ASC、DESC
+    }
+  ]
+}
+```
+
+> 排序条件是一个数组，也就是可以写多个排序条件。按照声明的顺序，当第一个条件相等时，再按照第二个条件排序，以此类推
+
+
+
+### 地理坐标排序
+
+地理坐标排序略有不同。
+
+**语法说明**：
+
+```json
+GET /indexName/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "sort": [
+    {
+      "_geo_distance" : {
+          "FIELD" : "纬度，经度", // 文档中geo_point类型的字段名、目标坐标点
+          "order" : "asc", // 排序方式
+          "unit" : "km" // 排序的距离单位
+      }
+    }
+  ]
+}
+```
+
+>指定字段必须是geo_point类型
+
+
+
+## 分页
+
+elasticsearch 默认情况下只返回top10的数据。而如果要查询更多数据就需要修改分页参数了。elasticsearch中通过修改from、size参数来控制要返回的分页结果：
+
+- from：从第几个文档开始
+- size：总共查询几个文档
+
+
+
+### 分页语法
+
+```json
+GET /hotel/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "from": 0, // 分页开始的位置，默认为0
+  "size": 10, // 期望获取的文档总数
+  "sort": [
+    {"price": "asc"}
+  ]
+}
+```
+
+
+
+### 深度分页问题
+
+对于查询990~1000的数据，查询语句为：
+
+```json
+GET /hotel/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "from": 990, // 分页开始的位置，默认为0
+  "size": 10, // 期望获取的文档总数
+  "sort": [
+    {"price": "asc"}
+  ]
+}
+```
+
+但在ES的内部分页逻辑：
+
+1. 先排序出前1000条数据
+2. 再截取出990~1000的文档
+
+
+
+这意味着，在集群模式下：
+
+1. 每个ES节点，先排序出前1000条数据
+2. 将所有ES节点的结果进行聚合，再次进行排序
+3. 再截取出990~1000的文档
+
+当汇总后的数据过多时，将会带来比较大的压力。
+
+> 因此elasticsearch会禁止from+ size 超过10000的请求。
+
+
+
+针对深度分页，ES提供了两种解决方案，[官方文档](https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html)：
+
+- search after：分页时需要排序，原理是从上一次的排序值开始，查询下一页数据。官方推荐使用的方式。
+- scroll：原理将排序后的文档id形成快照，保存在内存。官方已经不推荐使用。
+
+
+
+分页查询的常见实现方案以及优缺点：
+
+- `from + size`：
+    - 优点：支持随机翻页
+    - 缺点：深度分页问题，默认查询上限（from + size）是10000
+    - 场景：百度、京东、谷歌、淘宝这样的随机翻页搜索
+- `after search`：
+    - 优点：没有查询上限（单次查询的size不超过10000）
+    - 缺点：只能向后逐页查询，不支持随机翻页
+    - 场景：没有随机翻页需求的搜索，例如手机向下滚动翻页
+
+- `scroll`：
+    - 优点：没有查询上限（单次查询的size不超过10000）
+    - 缺点：会有额外内存消耗，并且搜索结果是非实时的
+    - 场景：海量数据的获取和迁移。从ES7.1开始不推荐，建议用 after search方案。
+
+
+
+## 高亮
+
+高亮显示的实现分为两步：
+
+- 1）为查询结果中的关键字添加一个标签，例如`<em>`标签
+- 2）为`<em>`标签编写CSS样式
+
+### 高亮语法
+
+```json
+GET /hotel/_search
+{
+  "query": {
+    "match": {
+      "FIELD": "TEXT" // 查询条件，高亮一定要使用全文检索查询
+    }
+  },
+  "highlight": {
+    "fields": { // 指定要高亮的字段
+      "FIELD": {
+        "pre_tags": "<em>",  // 用来标记高亮字段的前置标签
+        "post_tags": "</em>" // 用来标记高亮字段的后置标签
+      }
+    }
+  }
+}
+```
+
+**注意：**
+
+- 高亮是对关键字高亮，因此**搜索条件必须带有关键字**，而不能是范围这样的查询。
+- 默认情况下，**高亮的字段，必须与搜索指定的字段一致**，否则无法高亮
+- 如果要对非搜索字段高亮，则需要添加一个属性：required_field_match=false
+
+
+
+## 总结
+
+查询的DSL是一个大的JSON对象，包含下列属性：
+
+- query：查询条件
+- from和size：分页条件
+- sort：排序条件
+- highlight：高亮条件
+
+示例：
+
+![image-20210721203657850](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20210721203657850.png)
+
+
+
+
+
+
+
+# RestClient查询文档
+
+基本步骤包括：
+
+1. 准备Request对象
+2. 准备请求参数
+3. 发起请求
+4. 解析响应
+
+
+
+## 快速入门
+
+以match_all查询为例
+
+
+
+### 发起查询请求
+
+![image-20220322154756915](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220322154756915.png)
+
+代码解读：
+
+- 第一步，创建`SearchRequest`对象，指定索引库名
+
+- 第二步，利用`request.source()`构建DSL，DSL中可以包含查询、分页、排序、高亮等
+    - `query()`：代表查询条件，利用`QueryBuilders.matchAllQuery()`构建一个match_all查询的DSL
+- 第三步，利用client.search()发送请求，得到响应
+
+
+
+关键API：
+
+- `request.source()`，其中包含了查询、排序、分页、高亮等所有功能：
+
+    <img src="%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220322154843200.png" alt="image-20220322154843200" style="zoom:67%;" />
+
+- 工具类`QueryBuilders`：
+
+    <img src="%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220322154958566.png" alt="image-20220322154958566" style="zoom:80%;" />
+
+
+
+###解析响应
+
+![image-20220322155058182](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220322155058182.png)
+
+
+
+elasticsearch返回的结果是一个JSON字符串，结构包含：
+
+- `hits`：命中的结果
+    - `total`：总条数，其中的value是具体的总条数值
+    - `max_score`：所有结果中得分最高的文档的相关性算分
+    - `hits`：搜索结果的文档数组，其中的每个文档都是一个json对象
+        - `_source`：文档中的原始数据，也是json对象
+
+因此，我们解析响应结果，就是逐层解析JSON字符串，流程如下：
+
+- `SearchHits`：通过response.getHits()获取，就是JSON中的最外层的hits，代表命中的结果
+    - `SearchHits#getTotalHits().value`：获取总条数信息
+    - `SearchHits#getHits()`：获取SearchHit数组，也就是文档数组
+        - `SearchHit#getSourceAsString()`：获取文档结果中的_source，也就是原始的json文档数据
+
+### 完整代码如下
+
+```java
+@Test
+void testMatchAll() throws IOException {
+    // 1.准备Request
+    SearchRequest request = new SearchRequest("hotel");
+    // 2.准备DSL
+    request.source()
+        .query(QueryBuilders.matchAllQuery());
+    // 3.发送请求
+    SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+
+    // 4.解析响应
+    handleResponse(response);
+}
+
+private void handleResponse(SearchResponse response) {
+    // 4.解析响应
+    SearchHits searchHits = response.getHits();
+    // 4.1.获取总条数
+    long total = searchHits.getTotalHits().value;
+    System.out.println("共搜索到" + total + "条数据");
+    // 4.2.文档数组
+    SearchHit[] hits = searchHits.getHits();
+    // 4.3.遍历
+    for (SearchHit hit : hits) {
+        // 获取文档source
+        String json = hit.getSourceAsString();
+        // 反序列化
+        HotelDoc hotelDoc = JSON.parseObject(json, HotelDoc.class);
+        System.out.println("hotelDoc = " + hotelDoc);
+    }
+}
+```
+
+
+
+## match查询
+
+全文检索的match和multi_match查询与match_all的API基本一致。差别是查询条件，也就是query的部分。
+
+<img src="%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220322155935915.png" alt="image-20220322155935915" style="zoom:50%;" />
+
+因此，Java代码上的差异主要是request.source().query()中的参数了。同样是利用QueryBuilders提供的方法：
+
+<img src="%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220322155949365.png" alt="image-20220322155949365" style="zoom:67%;" />
+
+
+
+```java
+@Test
+void testMatch() throws IOException {
+    // 1.准备Request
+    SearchRequest request = new SearchRequest("hotel");
+    // 2.准备DSL
+    request.source()
+        .query(QueryBuilders.matchQuery("all", "如家"));
+    // 3.发送请求
+    SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+    // 4.解析响应
+    handleResponse(response);
+
+}
+```
+
+
+
+## 精确查询
+
+精确查询主要是两者：
+
+- term：词条精确匹配
+- range：范围查询
+
+与之前的查询相比，差异同样在查询条件，其它都一样。
+
+
+
+查询条件构造的API如下：
+
+<img src="%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220322160048625.png" alt="image-20220322160048625" style="zoom:67%;" />
+
+
+
+## 布尔查询
+
+布尔查询是用must、must_not、filter等方式组合其它查询，代码示例如下：
+
+<img src="%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220322160111665.png" alt="image-20220322160111665" style="zoom:67%;" />
+
+
+
+```java
+@Test
+void testBool() throws IOException {
+    SearchRequest request = new SearchRequest("hotel");
+
+    BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+    boolQuery.must(QueryBuilders.termQuery("city", "杭州"));
+    boolQuery.filter(QueryBuilders.rangeQuery("price").lte(250));
+    request.source().query(boolQuery);
+    
+    SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+    handleResponse(response);
+}
+```
+
+
+
+## 排序、分页
+
+搜索结果的排序和分页是与query同级的参数，因此同样是使用request.source()来设置。
+
+对应的API如下：
+
+<img src="%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220322162216201.png" alt="image-20220322162216201" style="zoom:80%;" />
+
+
+
+完整代码示例：
+
+```java
+@Test
+void testPageAndSort() throws IOException {
+    // 页码，每页大小
+    int page = 1, size = 5;
+
+    // 1.准备Request
+    SearchRequest request = new SearchRequest("hotel");
+    // 2.准备DSL
+    // 2.1.query
+    request.source().query(QueryBuilders.matchAllQuery());
+    // 2.2.排序 sort
+    request.source().sort("price", SortOrder.ASC);
+    // 2.3.分页 from、size
+    request.source().from((page - 1) * size).size(5);
+    // 3.发送请求
+    SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+    // 4.解析响应
+    handleResponse(response);
+}
+```
+
+
+
+## 高亮
+
+高亮的代码与之前代码差异较大，有两点：
+
+- 查询的DSL：其中除了查询条件，还需要添加高亮条件，同样是与query同级。
+- 结果解析：结果除了要解析_source文档数据，还要解析高亮结果
+
+
+
+### 高亮请求构建
+
+高亮请求的构建API如下：
+
+![image-20220322162302574](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220322162302574.png)
+
+> 上述代码省略了查询条件部分，但注意：高亮查询必须使用全文检索查询，并且要有搜索关键字，将来才可以对关键字高亮。
+
+
+
+```java
+@Test
+void testHighlight() throws IOException {
+    // 1.准备Request
+    SearchRequest request = new SearchRequest("hotel");
+    // 2.准备DSL
+    // 2.1.query
+    request.source().query(QueryBuilders.matchQuery("all", "如家"));
+    // 2.2.高亮
+    request.source().highlighter(new HighlightBuilder().field("name").requireFieldMatch(false));
+    // 3.发送请求
+    SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+    // 4.解析响应
+    handleResponse(response);
+
+}
+```
+
+
+
+### 高亮结果解析
+
+高亮的结果与查询的文档结果默认是分离的，并不在一起。
+
+因此解析高亮的代码需要额外处理：
+
+![image-20220322162350537](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220322162350537.png)
+
+
+
+```java
+private void handleResponse(SearchResponse response) {
+    // 4.解析响应
+    SearchHits searchHits = response.getHits();
+    // 4.1.获取总条数
+    long total = searchHits.getTotalHits().value;
+    System.out.println("共搜索到" + total + "条数据");
+    // 4.2.文档数组
+    SearchHit[] hits = searchHits.getHits();
+    // 4.3.遍历
+    for (SearchHit hit : hits) {
+        // 获取文档source
+        String json = hit.getSourceAsString();
+        // 反序列化
+        HotelDoc hotelDoc = JSON.parseObject(json, HotelDoc.class);
+        // 获取高亮结果
+        Map<String, HighlightField> highlightFields = hit.getHighlightFields();
+        if (!CollectionUtils.isEmpty(highlightFields)) {
+            // 根据字段名获取高亮结果
+            HighlightField highlightField = highlightFields.get("name");
+            if (highlightField != null) {
+                // 获取高亮值
+                String name = highlightField.getFragments()[0].string();
+                // 覆盖非高亮结果
+                hotelDoc.setName(name);
+            }
+        }
+        System.out.println("hotelDoc = " + hotelDoc);
+    }
+}
+```
+
+- 第一步：从结果中获取source。hit.getSourceAsString()，这部分是非高亮结果，json字符串。还需要反序列为HotelDoc对象
+- 第二步：获取高亮结果。hit.getHighlightFields()，返回值是一个Map，key是高亮字段名称，值是HighlightField对象，代表高亮值
+- 第三步：从map中根据高亮字段名称，获取高亮字段值对象HighlightField
+- 第四步：从HighlightField中获取Fragments，并且转为字符串。这部分就是真正的高亮字符串了
+- 第五步：用高亮的结果替换HotelDoc中的非高亮结果
+
+
+
+
+
+# 数据聚合
+
+https://www.bilibili.com/video/BV1LQ4y127n4?p=120
