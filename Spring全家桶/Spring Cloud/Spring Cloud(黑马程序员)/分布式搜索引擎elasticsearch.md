@@ -2085,3 +2085,797 @@ private void handleResponse(SearchResponse response) {
 # 数据聚合
 
 https://www.bilibili.com/video/BV1LQ4y127n4?p=120
+
+
+
+## 聚合的种类
+
+聚合常见的有三类：
+
+- **桶（Bucket）**聚合：用来对文档做分组
+    - TermAggregation：按照文档字段值分组，例如按照品牌值分组、按照国家分组
+    - Date Histogram：按照日期阶梯分组，例如一周为一组，或者一月为一组
+
+- **度量（Metric）**聚合：用以计算一些值，比如：最大值、最小值、平均值等
+    - Avg：求平均值
+    - Max：求最大值
+    - Min：求最小值
+    - Stats：同时求max、min、avg、sum等
+- **管道（pipeline）**聚合：其它聚合的结果为基础做聚合
+
+>**注意：**参加聚合的字段必须是keyword、日期、数值、布尔类型
+
+
+
+
+
+## DSL实现聚合
+
+- aggs代表聚合，与query同级。此时query的作用是限定聚合的文档范围
+- 聚合必须的三要素：
+    - 聚合名称
+    - 聚合类型
+    - 聚合字段
+- 聚合可选配置属性：
+    - size：指定聚合结果的数量
+    - order：指定聚合结果的排序方式
+    - field：指定聚合的字段
+
+
+
+### Bucket聚合语法
+
+语法如下：
+
+```json
+GET /hotel/_search
+{
+  "size": 0,  // 设置size为0，结果中不包含文档，只包含聚合结果
+  "aggs": { // 定义聚合
+    "brandAgg": { //给聚合起个名字
+      "terms": { // 聚合的类型，按照品牌值聚合，所以选择term
+        "field": "brand", // 参与聚合的字段
+        "size": 20 // 希望获取的聚合结果数量
+      }
+    }
+  }
+}
+```
+
+
+
+### 聚合结果排序
+
+> 默认情况下，Bucket聚合会统计Bucket内的文档数量，记为\_count，并且按照\_count降序排序。
+
+
+
+我们可以指定order属性，自定义聚合的排序方式：
+
+```json
+GET /hotel/_search
+{
+  "size": 0, 
+  "aggs": {
+    "brandAgg": {
+      "terms": {
+        "field": "brand",
+        "order": {
+          "_count": "asc" // 按照_count升序排列
+        },
+        "size": 20
+      }
+    }
+  }
+}
+```
+
+
+
+### 限定聚合范围
+
+>默认情况下，Bucket聚合是对索引库的所有文档做聚合，但真实场景下，用户会输入搜索条件，因此聚合必须是对搜索结果聚合。那么聚合必须添加限定条件。
+
+
+
+我们可以限定要聚合的文档范围，只要添加query条件即可：
+
+```json
+GET /hotel/_search
+{
+  "query": {
+    "range": {
+      "price": {
+        "lte": 200 // 只对200元以下的文档聚合
+      }
+    }
+  }, 
+  "size": 0, 
+  "aggs": {
+    "brandAgg": {
+      "terms": {
+        "field": "brand",
+        "size": 20
+      }
+    }
+  }
+}
+```
+
+
+
+### Metric聚合语法
+
+现在我们需要对桶内的酒店做运算，获取每个品牌的用户评分的min、max、avg等值。
+
+这就要用到Metric聚合了，例如stat聚合：就可以获取min、max、avg等结果。
+
+```json
+GET /hotel/_search
+{
+  "size": 0, 
+  "aggs": {
+    "brandAgg": { 
+      "terms": { 
+        "field": "brand", 
+        "size": 20
+      },
+      "aggs": { // 是brands聚合的子聚合，也就是分组后对每组分别计算
+        "score_stats": { // 聚合名称
+          "stats": { // 聚合类型，这里stats可以计算min、max、avg等
+            "field": "score" // 聚合字段，这里是score
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+这次的score_stats聚合是在brandAgg的聚合内部嵌套的子聚合。因为我们需要在每个桶分别计算。
+
+
+
+## RestAPI实现聚合
+
+### API语法
+
+聚合条件与query条件同级别，因此需要使用request.source()来指定聚合条件。
+
+- 聚合条件的语法：
+
+    <img src="%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220323182819417.png" alt="image-20220323182819417" style="zoom: 67%;" />
+
+- 聚合的结果也与查询结果不同，API也比较特殊。不过同样是JSON逐层解析：
+
+    <img src="%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220323182831539.png" alt="image-20220323182831539" style="zoom:67%;" />
+
+```java
+@SpringBootTest
+class HotelSearchTest {
+
+    private RestHighLevelClient client;
+
+    @Test
+    public void restAggregation() throws IOException {
+        SearchRequest request = new SearchRequest("hotel");
+
+        request.source().size(0);//不需要返回document数据
+        request.source().aggregation(AggregationBuilders.terms("brandAgg")//为聚合起一个名称：brandAgg
+                .field("brand") //指定需要聚合的字段：brand
+                .size(20)       //希望得到最多20个bucket的数据
+        );
+
+        SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+        Aggregations aggregations = response.getAggregations();
+        Terms brandTerms = aggregations.get("brandAgg");
+        List<? extends Terms.Bucket> buckets = brandTerms.getBuckets();
+        buckets.forEach(bucket -> {
+            String key = bucket.getKeyAsString();
+            long docCount = bucket.getDocCount();
+            System.out.println(key+" "+docCount);
+        });
+    }
+}
+```
+
+
+
+### 聚合的案例
+
+需求：在搜索页面中，品牌、城市等信息应是通过聚合索引库中的酒店数据得来的，而非是耦合在静态页面中。即实现如下接口：
+```java
+/*
+	查询城市、星级、品牌的聚合结果
+	@return 聚合结果，格式：{"城市"：["上海","北京"],"品牌":["如家","希尔顿"]}
+*/
+Map<String,List<String>> filters();
+```
+
+![image-20220323184435999](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220323184435999.png)
+
+
+
+```java
+@Service
+public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHotelService {
+
+    @Autowired
+    private RestHighLevelClient restHighLevelClient;
+
+
+    @Override
+    public Map<String, List<String>> filters() {
+        SearchRequest request = new SearchRequest("hotel");
+
+        request.source().size(0);//不需要返回document数据
+        buildAggregation(request,"brandAgg","brand",20);
+        buildAggregation(request,"cityAgg","city",20);
+        buildAggregation(request,"starAgg","starName",20);
+
+        SearchResponse response = null;
+        try {
+            response = restHighLevelClient.search(request, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        
+        assert response != null;
+        Aggregations aggregations = response.getAggregations();
+        Map<String, List<String>> result = new HashMap<>();
+        
+        List<String> brandList = getAggByName(aggregations,"brandAgg");
+        result.put("品牌",brandList);
+        List<String> cityList = getAggByName(aggregations,"cityAgg");
+        result.put("城市",cityList);
+        List<String> starList = getAggByName(aggregations,"starAgg");
+        result.put("星级",starList);
+
+        return result;
+    }
+
+    private void buildAggregation(SearchRequest request,String name, String field ,int size) {
+        request.source().aggregation(AggregationBuilders.terms(name)//为聚合起一个名称：brandAgg
+                .field(field) //指定需要聚合的字段：brand
+                .size(size)       //希望得到最多20个bucket的数据
+        );
+    }
+
+    private List<String> getAggByName(Aggregations aggregations,String aggName) {
+        List<String> brandList = new ArrayList<>();
+        Terms brandTerms = aggregations.get(aggName);
+        List<? extends Terms.Bucket> buckets = brandTerms.getBuckets();
+        buckets.forEach(bucket -> {
+            brandList.add(bucket.getKeyAsString());
+        });
+        return brandList;
+    }
+}
+```
+
+
+
+# 自动补全
+
+## 安装拼音分词器
+
+步骤：
+
+1. 解压
+
+2. 上传到虚拟机中，elasticsearch的plugin目录
+
+3. 重启elasticsearch
+
+4. 测试：
+
+    ```json
+    POST /_analyze
+    {
+      "text": "如家酒店还不错",
+      "analyzer": "pinyin"
+    }
+    ```
+
+    
+
+## 自定义分词器
+
+默认的拼音分词器会将每个汉字单独分为拼音，而我们希望的是每个词条形成一组拼音，需要对拼音分词器做个性化定制，形成自定义分词器。
+
+
+
+elasticsearch中分词器（analyzer）的组成包含三部分：
+
+- character filters：在tokenizer之前对文本进行处理。例如删除字符、替换字符
+- tokenizer：将文本按照一定的规则切割成词条（term）。例如keyword，就是不分词；还有ik_smart
+- tokenizer filter：将tokenizer输出的词条做进一步处理。例如大小写转换、同义词处理、拼音处理等
+
+![image-20220323192149250](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220323192149250.png)
+
+
+
+声明自定义分词器的语法如下：
+
+```json
+PUT /test
+{
+  "settings": {
+    "analysis": {
+      "analyzer": { // 自定义分词器
+        "my_analyzer": {  // 分词器名称
+          "tokenizer": "ik_max_word",
+          "filter": "py"
+        }
+      },
+      "filter": { // 自定义tokenizer filter
+        "py": { // 过滤器名称
+          "type": "pinyin", // 过滤器类型，这里是pinyin
+		  "keep_full_pinyin": false,
+          "keep_joined_full_pinyin": true,
+          "keep_original": true,
+          "limit_first_letter_length": 16,
+          "remove_duplicated_term": true,
+          "none_chinese_pinyin_tokenize": false
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "name": {
+        "type": "text",
+        "analyzer": "my_analyzer",//创建倒排索引用分词器
+        "search_analyzer": "ik_smart"//搜索用分词器
+      }
+    }
+  }
+}
+```
+
+> 此配置在创建索引库时指定。故只对当前索引库有效
+
+
+
+> 注意，拼音分词器适合在创建倒排索引时使用；但不要在搜索时使用
+
+![image-20220323192910562](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220323192910562.png)
+
+
+
+## 自动补全查询
+
+elasticsearch提供了[Completion Suggester](https://www.elastic.co/guide/en/elasticsearch/reference/7.6/search-suggesters.html)查询来实现自动补全功能。这个查询会匹配以用户输入内容开头的词条并返回。为了提高补全查询的效率，对于文档中字段的类型有一些约束：
+
+- 参与补全查询的字段必须是completion类型。
+- 字段的内容一般是用来补全的多个词条形成的数组。
+
+
+
+例如：
+
+- 对如下的索引库：
+
+    ```json
+    // 创建索引库
+    PUT test
+    {
+      "mappings": {
+        "properties": {
+          "title":{
+            "type": "completion"
+          }
+        }
+      }
+    }
+    ```
+
+- 插入下面的数据：
+
+    ```json
+    // 示例数据
+    POST test/_doc
+    {
+      "title": ["Sony", "WH-1000XM3"]
+    }
+    POST test/_doc
+    {
+      "title": ["SK-II", "PITERA"]
+    }
+    POST test/_doc
+    {
+      "title": ["Nintendo", "switch"]
+    }
+    ```
+
+其对应的DSL语句如下：
+
+```json
+// 自动补全查询
+GET /test/_search
+{
+  "suggest": {
+    "title_suggest": {
+      "text": "s", // 关键字
+      "completion": {
+        "field": "title", // 补全查询的字段
+        "skip_duplicates": true, // 跳过重复的
+        "size": 10 // 获取前10条结果
+      }
+    }
+  }
+}
+```
+
+
+
+## 自动补全的RestAPI
+
+- 查询：
+
+    ![image-20220323195250076](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220323195250076.png)
+
+- 解析：
+
+    ![image-20220323195254496](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220323195254496.png)
+
+```json
+@Override
+public List<String> getSuggestions(String prefix) {
+    try {
+        // 1.准备Request
+        SearchRequest request = new SearchRequest("hotel");
+        // 2.准备DSL
+        request.source().suggest(new SuggestBuilder().addSuggestion(
+            "suggestions",
+            SuggestBuilders.completionSuggestion("suggestion")
+            .prefix(prefix)
+            .skipDuplicates(true)
+            .size(10)
+        ));
+        // 3.发起请求
+        SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+        // 4.解析结果
+        Suggest suggest = response.getSuggest();
+        // 4.1.根据补全查询名称，获取补全结果
+        CompletionSuggestion suggestions = suggest.getSuggestion("suggestions");
+        // 4.2.获取options
+        List<CompletionSuggestion.Entry.Option> options = suggestions.getOptions();
+        // 4.3.遍历
+        List<String> list = new ArrayList<>(options.size());
+        for (CompletionSuggestion.Entry.Option option : options) {
+            String text = option.getText().toString();
+            list.add(text);
+        }
+        return list;
+    } catch (IOException e) {
+        throw new RuntimeException(e);
+    }
+}
+```
+
+
+
+
+
+# 数据同步
+
+## 问题分析
+
+elasticsearch中的酒店数据来自于mysql数据库，因此mysql数据发生改变时，elasticsearch也必须跟着改变，这个就是elasticsearch与mysql之间的**数据同步**。
+
+但在微服务中，负责酒店管理(操作MySQL)的业务，与负责酒店搜索(操作elasticsearch)的业务==往往会在两个不同的微服务上==。
+
+## 解决方案
+
+常见的数据同步解决方案有三种：
+
+- 同步调用：
+
+    ![image-20220323205136346](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220323205136346.png)
+
+    hotel-demo对外提供接口，用来修改elasticsearch中的数据
+
+    酒店管理服务在完成数据库操作后，直接调用hotel-demo提供的接口
+
+- 异步通知：
+
+    ![image-20220323205208536](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220323205208536.png)
+
+    hotel-admin对mysql数据库数据完成增、删、改后，发送MQ消息
+
+    hotel-demo监听MQ，接收到消息后完成elasticsearch数据修改
+
+- 监听MySQL的binlog：
+
+    ![image-20220323205234967](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220323205234967.png)
+
+    给mysql开启binlog功能
+
+    mysql完成增、删、改操作都会记录在binlog中
+
+    hotel-demo基于canal监听binlog变化，实时更新elasticsearch中的内容
+
+    
+
+方式一：同步调用
+
+- 优点：实现简单，粗暴
+- 缺点：业务耦合度高
+
+方式二：异步通知
+
+- 优点：低耦合，实现难度一般
+- 缺点：依赖mq的可靠性
+
+方式三：监听binlog
+
+- 优点：完全解除服务间耦合
+- 缺点：开启binlog增加数据库负担、实现复杂度高
+
+
+
+## 异步通知方式
+
+步骤：
+
+1. 导入课前资料提供的hotel-admin项目，启动并测试酒店数据的CRUD
+
+    >访问 http://localhost:8099
+
+2. 声明exchange、queue、RoutingKey
+
+3. 在hotel-admin中的增、删、改业务中完成消息发送
+
+4. 在hotel-demo中完成消息监听，并更新elasticsearch中数据
+
+5. 启动并测试数据同步功能
+
+
+
+### 声明交换机、队列
+
+MQ结构如图：
+
+![image-20220323210559789](%E5%88%86%E5%B8%83%E5%BC%8F%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8Eelasticsearch.assets/image-20220323210559789.png)
+
+
+
+步骤如下：
+
+1. 引入依赖
+
+    ```xml
+    <!--amqp-->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-amqp</artifactId>
+    </dependency>
+    ```
+
+2. 配置AMQP
+
+    ```yaml
+    spring:
+      rabbitmq:
+        host: 192.168.88.128
+        port: 5672
+        username: itcast
+        password: 123321
+        virtual-host: /
+    ```
+
+3. 声明交换机、队列
+
+    ```java
+    package cn.itcast.hotel.constatnts;
+    
+    public class MqConstants {
+        /**
+         * 交换机
+         */
+        public final static String HOTEL_EXCHANGE = "hotel.topic";
+        /**
+         * 监听新增和修改的队列
+         */
+        public final static String HOTEL_INSERT_QUEUE = "hotel.insert.queue";
+        /**
+         * 监听删除的队列
+         */
+        public final static String HOTEL_DELETE_QUEUE = "hotel.delete.queue";
+        /**
+         * 新增或修改的RoutingKey
+         */
+        public final static String HOTEL_INSERT_KEY = "hotel.insert";
+        /**
+         * 删除的RoutingKey
+         */
+        public final static String HOTEL_DELETE_KEY = "hotel.delete";
+    }
+    ```
+
+    ```java
+    package cn.itcast.hotel.config;
+    
+    import cn.itcast.hotel.constants.MqConstants;
+    import org.springframework.amqp.core.Binding;
+    import org.springframework.amqp.core.BindingBuilder;
+    import org.springframework.amqp.core.Queue;
+    import org.springframework.amqp.core.TopicExchange;
+    import org.springframework.context.annotation.Bean;
+    import org.springframework.context.annotation.Configuration;
+    
+    @Configuration
+    public class MqConfig {
+        @Bean
+        public TopicExchange topicExchange(){
+            return new TopicExchange(MqConstants.HOTEL_EXCHANGE, true, false);
+        }
+    
+        @Bean
+        public Queue insertQueue(){
+            return new Queue(MqConstants.HOTEL_INSERT_QUEUE, true);
+        }
+    
+        @Bean
+        public Queue deleteQueue(){
+            return new Queue(MqConstants.HOTEL_DELETE_QUEUE, true);
+        }
+    
+        @Bean
+        public Binding insertQueueBinding(){
+            return BindingBuilder.bind(insertQueue()).to(topicExchange()).with(MqConstants.HOTEL_INSERT_KEY);
+        }
+    
+        @Bean
+        public Binding deleteQueueBinding(){
+            return BindingBuilder.bind(deleteQueue()).to(topicExchange()).with(MqConstants.HOTEL_DELETE_KEY);
+        }
+    }
+    ```
+
+    
+
+
+
+### 发送MQ消息
+
+在hotel-admin中的增、删、改业务中分别发送MQ消息：
+
+```java
+@RestController
+@RequestMapping("hotel")
+public class HotelController {
+
+    @Autowired
+    private IHotelService hotelService;
+
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    @PostMapping
+    public void saveHotel(@RequestBody Hotel hotel){
+        hotelService.save(hotel);
+
+        rabbitTemplate.convertAndSend(MqConstants.HOTEL_EXCHANGE,MqConstants.HOTEL_INSERT_KEY,hotel.getId());
+    }
+
+    @PutMapping()
+    public void updateById(@RequestBody Hotel hotel){
+        if (hotel.getId() == null) {
+            throw new InvalidParameterException("id不能为空");
+        }
+        hotelService.updateById(hotel);
+
+        rabbitTemplate.convertAndSend(MqConstants.HOTEL_EXCHANGE,MqConstants.HOTEL_INSERT_KEY,hotel.getId());
+
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteById(@PathVariable("id") Long id) {
+        hotelService.removeById(id);
+
+        rabbitTemplate.convertAndSend(MqConstants.HOTEL_EXCHANGE,MqConstants.HOTEL_DELETE_KEY,id);
+    }
+}
+```
+
+
+
+### 监听MQ消息
+
+当hotel-demo接收到
+
+- 新增消息：根据id查询数据库，然后向索引库增加数据
+- 删除消息：从索引库中删除数据
+
+> hotel-demo是专门操作es的微服务项目
+
+
+
+监听器如下：
+
+```java
+package cn.itcast.hotel.mq;
+
+import cn.itcast.hotel.constants.MqConstants;
+import cn.itcast.hotel.service.IHotelService;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+@Component
+public class HotelListener {
+
+    @Autowired
+    private IHotelService hotelService;
+
+    /**
+     * 监听酒店新增或修改的业务
+     * @param id 酒店id
+     */
+    @RabbitListener(queues = MqConstants.HOTEL_INSERT_QUEUE)
+    public void listenHotelInsertOrUpdate(Long id){
+        hotelService.insertById(id);
+    }
+
+    /**
+     * 监听酒店删除的业务
+     * @param id 酒店id
+     */
+    @RabbitListener(queues = MqConstants.HOTEL_DELETE_QUEUE)
+    public void listenHotelDelete(Long id){
+        hotelService.deleteById(id);
+    }
+}
+```
+
+
+
+业务层代码如下：
+
+```java
+public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHotelService {
+
+    @Autowired
+    private RestHighLevelClient restHighLevelClient;
+    
+    @Override
+    public void deleteById(Long id) {
+        try {
+            // 1.准备Request
+            DeleteRequest request = new DeleteRequest("hotel", id.toString());
+            // 2.发送请求
+            client.delete(request, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void insertById(Long id) {
+        try {
+            // 0.根据id查询酒店数据
+            Hotel hotel = getById(id);
+            // 转换为文档类型
+            HotelDoc hotelDoc = new HotelDoc(hotel);
+
+            // 1.准备Request对象
+            IndexRequest request = new IndexRequest("hotel").id(hotel.getId().toString());
+            // 2.准备Json文档
+            request.source(JSON.toJSONString(hotelDoc), XContentType.JSON);
+            // 3.发送请求
+            client.index(request, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+	}
+}
+```
+
+
+
+
+
+# ES集群
+
+https://www.bilibili.com/video/BV1LQ4y127n4?p=138
