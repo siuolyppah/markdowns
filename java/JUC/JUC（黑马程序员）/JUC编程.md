@@ -340,19 +340,47 @@ log.debug("结果是:{}", result);//结果是:100
 
 ### 栈与栈帧
 
-https://www.bilibili.com/video/BV16J411h7Rd?p=20&spm_id_from=pageDriver
+- 栈（Java 虚拟机栈）：Java Virtual Machine Stacks 
+
+- JVM的组成：由堆、栈、方法区所组成
+
+  其中栈内存就是给线程使用的，每个线程启动后，虚拟机就会为其分配一块栈内存。
+
+- 每个`栈`由多个`栈帧（Frame）`组成，对应着每次`方法`调用时所占用的内存
+
+- 每个线程只能有一个`活动栈帧`，对应着当前正在执行的那个方法
+
+
+
+
 
 ### 线程上下文切换(**Thread Context Switch**)
 
+因为以下一些原因导致 cpu 不再执行当前的线程，转而执行另一个线程的代码
+
+- 线程的 cpu 时间片用完
+
+- 垃圾回收
+
+- 有更高优先级的线程需要运行
+
+- 线程自己调用了 sleep、yield、wait、join、park、synchronized、lock 等方法
+
+>Context Switch 频繁发生将会影响性能
 
 
 
+当 Context Switch 发生时，需要由操作系统保存当前线程的状态，并恢复另一个线程的状态[^3]
 
-
+[^3]:Java 中对应的概念即为程序计数器（Program Counter Register），它的作用是记住下一条 jvm 指令的执行地址，是线程私有的状态。包括程序计数器、虚拟机栈中每个栈帧的信息，如局部变量、操作数栈、返回地址等
 
 
 
 ## 线程API
+
+https://www.bilibili.com/video/BV16J411h7Rd?p=24&spm_id_from=pageDriver
+
+
 
 
 
