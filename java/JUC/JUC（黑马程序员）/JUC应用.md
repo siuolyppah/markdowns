@@ -177,3 +177,48 @@ while(true) {
 - 可以用 wait 或条件变量达到类似的效果
 - 不同的是，后两种都需要加锁，并且需要相应的唤醒操作，一般适用于要进行同步的场景
 - sleep 适用于无需锁同步的场景
+
+
+
+
+
+# 场景——同步与异步
+
+## 需要等待结果
+
+### join方法实现同步
+
+```java
+static int result = 0;
+private static void test1() throws InterruptedException {
+    log.debug("开始");
+    Thread t1 = new Thread(() -> {
+        log.debug("开始");
+        sleep(1);
+        log.debug("结束");
+        result = 10;
+    }, "t1");
+    t1.start();
+    t1.join();
+    log.debug("结果为:{}", result);
+}
+```
+
+
+
+输出：
+
+```
+20:30:40.453 [main] c.TestJoin - 开始
+20:30:40.541 [Thread-0] c.TestJoin - 开始
+20:30:41.543 [Thread-0] c.TestJoin - 结束
+20:30:41.551 [main] c.TestJoin - 结果为:10
+```
+
+
+
+评价：
+
+- 需要外部共享变量，不符合面向对象封装的思想
+
+- 必须等待线程结束，`不能配合线程池使用`

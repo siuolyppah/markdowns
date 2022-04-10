@@ -626,9 +626,200 @@ public class Test7 {
 
 ### join()方法
 
-https://www.bilibili.com/video/BV16J411h7Rd?p=32
+join方法用于阻塞等待一个线程执行结束。
+
+```java
+@Slf4j
+public class JoinTest {
+
+    public static int x = 0;
+
+    public static void main(String[] args) throws InterruptedException {
+        Thread t1 = new Thread(() -> {
+            log.debug("begin");
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            x = 1;
+            log.debug("end");
+        }, "t1");
+
+        t1.start();
+        t1.join();
+
+        log.debug("x:{}", x);
+    }
+}
+```
+
+
+
+> join方法还有一个重载的版本join(long n)  ，最多等待n毫秒
+
+
+
+### interrupt()方法
+
+#### 打断sleep、wait、join的线程
+
+这几个方法都会让线程进入阻塞状态。
+
+处于这几种状态的线程被打断后 ，`会清空打断状态`，`打断标记将为false`
+
+
+
+以 sleep 为例：
+
+```java
+private static void test1() throws InterruptedException {
+    Thread t1 = new Thread(()->{
+        sleep(1);
+    }, "t1");
+    t1.start();
+    sleep(0.5);
+    t1.interrupt();
+    log.debug(" 打断状态: {}", t1.isInterrupted());
+}
+```
+
+
+
+运行结果：
+
+```java
+java.lang.InterruptedException: sleep interrupted
+    at java.lang.Thread.sleep(Native Method)
+    at java.lang.Thread.sleep(Thread.java:340)
+    at java.util.concurrent.TimeUnit.sleep(TimeUnit.java:386)
+    at cn.itcast.n2.util.Sleeper.sleep(Sleeper.java:8)
+    at cn.itcast.n4.TestInterrupt.lambda$test1$3(TestInterrupt.java:59)
+    at java.lang.Thread.run(Thread.java:745)
+    21:18:10.374 [main] c.TestInterrupt - 打断状态: false
+```
+
+> 如果主线程运行的比较快，t1线程在运行前就被直接打断，标记将为true
+
+
+
+#### 打断正常运行的线程
+
+打断正常运行的线程, 不会清空打断状态，`打断标记将为true`，`被打断线程将继续运行`
+
+```java
+private static void test2() throws InterruptedException {
+    Thread t2 = new Thread(()->{
+        while(true) {
+            Thread current = Thread.currentThread();
+            boolean interrupted = current.isInterrupted();
+            if(interrupted) {
+                log.debug(" 打断状态: {}", interrupted);
+                break;
+            }
+        }
+    }, "t2");
+    t2.start();
+    sleep(0.5);
+    t2.interrupt();
+}
+```
+
+
+
+结果：
+
+```java
+20:57:37.964 [t2] c.TestInterrupt - 打断状态: true
+```
+
+
+
+#### 打断park线程
+
+> LockSupport.park()方法会暂停当前线程，使其进入WAITING状态
+>
+> 但***若当前线程的打断标记为真，park()方法将失效***
+
+```java
+@Slf4j
+public class ParkTest {
+    public static void main(String[] args) throws InterruptedException {
+        Thread t1 = new Thread(() -> {
+            log.debug("park...");
+            LockSupport.park();
+            log.debug("unpark...");
+            
+            //log.debug("打断状态：{}", Thread.currentThread().isInterrupted());
+            log.debug("打断状态：{}", Thread.interrupted());
+            //获取当前线程的打断标记，并将其设置为假
+            
+            //若当前线程的打断标记为真，park方法将失效
+            LockSupport.park();
+        }, "t1");
+        t1.start();
+        Thread.sleep(1000);
+        t1.interrupt();
+    }
+}
+```
+
+
+
+### 过时的API
+
+|  方法名   | 是否static |   功能说明   |
+| :-------: | :--------: | :----------: |
+|  stop()   |     否     | 强制停止线程 |
+| suspend() |     否     |   挂起线程   |
+| resume()  |     否     |   恢复线程   |
+
+这些方法容易破坏同步代码块，造成线程死锁
+
+
+
+## 主线程与守护线程
+
+- 默认情况下，Java 进程需要等待所有线程都运行结束，才会结束。
+
+- 有一种特殊的线程叫做守护线程，***只要其它非守护线程运行结束***了，即使守护线程的代码没有执行完，***Java进程也会强制结束***。
+
+
+
+```java
+log.debug("开始运行...");
+Thread t1 = new Thread(() -> {
+    log.debug("开始运行...");
+    sleep(2);
+    log.debug("运行结束...");
+}, "daemon");
+
+// 设置该线程为守护线程
+t1.setDaemon(true);
+t1.start();
+sleep(1);
+log.debug("运行结束...");
+```
+
+输出：
+
+```
+08:26:38.123 [main] c.TestDaemon - 开始运行... 
+08:26:38.213 [daemon] c.TestDaemon - 开始运行... 
+08:26:39.215 [main] c.TestDaemon - 运行结束...
+```
+
+
+
+>**注意**：
+>
+>- 垃圾回收器线程就是一种守护线程
+>- Tomcat 中的 Acceptor 和 Poller 线程[^7]都是守护线程，所以 Tomcat 接收到 shutdown 命令后，不会等待它们处理完当前请求
+
+[^7]:用于接收和分发请求
 
 
 
 ## 线程状态
 
+https://www.bilibili.com/video/BV16J411h7Rd?p=44&spm_id_from=pageDriver
