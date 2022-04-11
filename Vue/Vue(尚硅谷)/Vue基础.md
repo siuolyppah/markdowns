@@ -17,7 +17,7 @@ VS插件：
 
   ![image-20220410214122329](Vue%E5%9F%BA%E7%A1%80.assets/image-20220410214122329.png)
 
-- 
+- Vue 3 Snippets
 
 
 
@@ -536,3 +536,436 @@ https://www.bilibili.com/video/BV1Zy4y1K7SH?p=10&spm_id_from=pageDriver
 
 # 事件处理
 
+## v-on指令
+
+- 使用`v-on:xxx`指令（简写为`@xxx`），其中xxx为事件名（如click）
+
+- 事件的回调函数，需要配置在methods对象中，并且最终会出现在Vue实例上。
+
+  > 回调函数也可以配置在data对象上，但会对其进行数据代理和数据劫持
+
+- 若回调函数不是箭头函数，则函数中的this指向Vue实例
+
+- 关于参数传递问题：
+
+  - 使用`$event`占位符，以传递PointerEvent对象
+
+
+
+```html
+
+<div id="root">
+    <button v-on:click="showInfo(100,$event)">click me to alert msg</button>
+</div>
+
+<script>
+    const vm = new Vue({
+        el:"#root",
+        data:{},
+        methods:{
+            showInfo(a,$event){
+                console.log(event);         //event为一个PointerEvent对象
+                console.log(this === vm);   //this为此Vue实例
+            }
+        },
+    });
+</script>
+
+```
+
+
+
+## 事件修饰符
+
+- prevent : 阻止事件的默认行为 event.preventDefault() 
+
+  ```html
+  <div id="root">
+      <a href="https://www.baidu.com" @click.prevent="showInfo">click me</a>
+  </div>
+  
+  
+  <script>
+      new Vue({
+          el:"#root",
+          methods:{
+              showInfo(event){
+                  alert("hello");
+                  //event.preventDefault();
+              }
+          }
+      });
+  </script>
+  ```
+
+- stop : 停止事件冒泡 event.stopPropagation()
+
+  ```html
+  <div id="root">
+      <div @click="showInfo">
+          <button @click.stop="showInfo">click me</button>
+      </div>
+  </div>
+  
+  
+  <script>
+      new Vue({
+          el: "#root",
+          methods: {
+              showInfo(event) {
+                  alert("hello");
+  
+                  // event.stopPropagation();
+              }
+          }
+      });
+  </script>
+  ```
+
+- once：事件只触发一次
+
+- capture：使用事件的捕获模式
+
+- self：只要event.target是当前操作的元素时，才触发事件
+
+- passive：事件的默认行为立即执行，无需等待事件回调执行完毕
+
+
+
+## 按键修饰符
+
+只有满足条件时，才触发回调函数
+
+- 有别名的：
+
+  - enter
+
+  - delete：删除（删除和退格键）
+
+  - esc
+
+  - space
+
+  - tab
+
+    > tab键将在按下时切换焦点，因此要绑定tab键，使用keydown事件
+
+  - up
+
+  - down
+
+  - left
+
+  - right
+
+- 无别名的：
+
+  - 如caps-lock
+
+  > ctrl, alt, shift, meta键为系统修饰键，比较特殊：
+  >
+  > - 配合keyup使用：按下修饰键的同时，再按下其他键，事件将触发于其他键抬起时
+  > - 配合keydown使用：正常触发事件
+
+- 使用键码：如@keyup.13（即回车）
+
+- 使用键码，自定义别名：
+
+  ```html
+  <button @click.huiche="showInfo">click me</button>
+  <script>
+  	Vue.config.keyCodes.huiche = 13;
+  </script>
+  ```
+
+  
+
+
+
+```html
+<div id="root">
+    <input type="text" placeholder="请输入内容" @keyup.enter="showInfo">
+</div>
+
+
+<script>
+    new Vue({
+        el:"#root",
+        methods:{
+            showInfo(event){
+                // 13是回车的ASCII编码
+                // if (event.keyCode !== 13) return;
+
+                console.log(event.target.value);
+            }
+        }
+    });
+</script>
+```
+
+
+
+
+
+# 计算属性与监视
+
+## 计算属性
+
+计算属性：`computed`
+
+- 计算属性将***根据已有属性计算得来***
+
+- 底层为Object.defineproperty()
+
+
+> ***计算属性在使用时，不需要()***。
+>
+> 因为Vue使用数据代理，将计算属性对应的方法，转换成了Vue实例的属性
+
+
+
+```html
+<div id="root">
+    姓：<input type="text" v-model="first"></br>
+    名：<input type="text" v-model="second"></br>
+    全名：<span>{{fullName}}</span>
+</div>
+
+<script>
+    new Vue({
+        el:"#root",
+        data:{
+            first:"张",
+            second:"三",
+        },
+        computed:{
+            fullName:{
+                //当读取fullName属性时，调用该函数获取属性值
+                get(){
+                    return this.first + '-' + this.second;
+                },
+
+                set(value){
+                    const arr = value.split('-');
+                    this.first = arr[0];
+                    this.second = arr[1];
+                }
+            }
+        }
+    });
+</script>
+```
+
+
+
+关于getter被调用的时机：
+
+- 初次读取fullName时
+- 所依赖的数据，发生变化时
+
+> 相较于methods的方式，计算属性能够提供缓存效果
+
+
+
+计算属性的简写方式（必须保证只读不写）：
+
+```html
+<div id="root">
+    姓：<input type="text" v-model="first"></br>
+    名：<input type="text" v-model="second"></br>
+    全名：<span>{{fullName}}</span>
+</div>
+
+<script>
+    new Vue({
+        el:"#root",
+        data:{
+            first:"张",
+            second:"三",
+        },
+        computed:{
+            fullName:{
+                //相当于getter
+                fullName:function(){
+                    return this.first + '-' + this.second;
+                }
+            }
+        }
+    });
+</script>
+```
+
+
+
+## 监视属性
+
+通过 vm 对象的$watch()或 watch 配置来监视指定的属性。
+
+***当属性变化时， 将使用新值和旧值自动调用回调函数***。
+
+可以监视的属性：
+
+- data属性
+- computed属性
+
+
+
+有两种写法：
+
+- 初始化Vue实例时：
+
+  ```html
+  <script>
+      const vm = new Vue({
+          el: "#root",
+          data: {
+              isHot: true,
+          },
+          computed: {
+              info() {
+                  return this.isHot ? "炎热" : "凉爽";
+              }
+          },
+          watch: {
+              isHot:{
+                  //若配置为true，则在初始化时就调用一次handler
+                  //immediate:true,
+  
+                  //当isHot值被修改时，调用此函数
+                  handler(newValue,oldValue){
+                      console.log(oldValue,newValue)
+                  }
+              }
+          },
+          methods: {
+              changeWeather() {
+                  this.isHot = !this.isHot;
+              }
+          },
+      });
+  </script>
+  ```
+
+- 使用$watch：
+
+  ```html
+  <script>
+      vm.$watch('isHot', {
+          handler(newValue, oldValue) {
+              console.log(oldValue, newValue)
+          }
+      });
+  </script>
+  ```
+
+  
+
+### 深度监视
+
+Vue默认不进行深度监视，需要配置deep属性：
+
+-  deep为false：只会监视numbers对象（即地址），并不会监视numbers对象内部
+
+- deep为true：会监视numbers对象内部的变化
+
+
+
+```html
+<body>
+    <div id="root">
+        <h1>a的值为：{{numbers.a}}</h1>
+        <button @click="add_a">click me to add a</button>
+    </div>
+
+
+    <script>
+        new Vue({
+            el: "#root",
+            data: {
+                numbers: {
+                    a: 1,
+                    b: 2,
+                },
+            },
+            methods: {
+                add_a() {
+                    this.numbers.a++;
+                }
+            },
+            watch: {
+
+                //监测多级结构中某个属性的变化
+                'numbers.a':{
+                    handler(newValue,oldValue){
+                        console.log(newValue,oldValue);
+                    },
+                },
+
+                //监视多级结构中所有属性的变化
+                numbers:{
+                    //deep为false：只会监视numbers对象（即地址），并不会监视numbers对象内部
+                    //deep为true：会监视numbers对象内部的变化
+
+                    deep:true,
+                    handler(){},
+                }
+            },
+        })
+    </script>
+</body>
+```
+
+
+
+### 监视的简写形式
+
+仅配置handler函数时，可以使用简写形式
+
+- 配置Vue实例方式：
+
+  ```html
+  <script>
+      new Vue({
+          el:"#root",
+          data:{
+              isHot:false,
+          },
+          watch:{
+              isHot(newValue, oldValue){
+                  //函数体
+              },
+          }
+      });
+  </script>
+  ```
+
+- $watch()方式：
+
+   ```html
+   <script>
+       const vm = new Vue({
+           el:"#root",
+           data:{
+               isHot:false,
+           },
+       });
+   
+       vm.$watch('isHot',function(newValue,oldValue){
+           //函数体
+       });
+   </script>
+   ```
+
+  
+
+## watch和computed对比
+
+- watch和computed都可以完成功能
+  - watch的特点是可以进行异步操作
+  - computed的特点是实现功能比较便捷
+
+
+
+# class 与 style 绑定
+
+https://www.bilibili.com/video/BV1Zy4y1K7SH?p=26&spm_id_from=pageDriver
