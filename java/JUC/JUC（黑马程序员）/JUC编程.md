@@ -820,6 +820,138 @@ log.debug("运行结束...");
 
 
 
-## 线程状态
+# 线程状态
 
-https://www.bilibili.com/video/BV16J411h7Rd?p=44&spm_id_from=pageDriver
+## 操作系统层面的五态模型
+
+![image-20220411222918608](JUC%E7%BC%96%E7%A8%8B.assets/image-20220411222918608.png)
+
+***操作系统***的五态模型：
+
+- 初始状态：仅在语言层面创建了线程对象，还未与操作系统线程相关联
+
+- 可运行状态（就绪态）：线程已经创建（与操作系统线程关联），可被处理机调度执行
+
+- 运行状态：分配时间片，上处理机执行
+
+- 阻塞状态：如果调用阻塞API，如BIO读写文件，此时线程实际用不到CPU，将导致线程上下文切换，当前线程进入阻塞状态。
+
+  ***处于阻塞状态的线程，不会被调度执行，直至线程被唤醒***。
+
+- 终止状态：线程已经执行完毕，生命周期结束
+
+
+
+## JavaAPI层面的六态模型
+
+根据 Thread.State 枚举，分为六种状态：
+
+- NEW 线程刚被创建，但是还没有调用 start() 方法
+
+- RUNNABLE 当调用了 start() 方法之后
+
+  >注意，**Java API** 层面的 RUNNABLE 状态涵盖了 **操作系统** 层面的：
+  >
+  >- 可运行状态
+  >- 运行状态
+  >- 阻塞状态：***特指由于 BIO 导致的线程阻塞***，在 Java 里无法区分，仍然认为是可运行
+
+- BLOCKED
+
+- WAITING
+
+- TIMED_WAITING
+
+  > 上面三种都是 **Java API** 层面对【阻塞状态】的细分
+
+- TERMINATED 当线程代码运行结束
+
+![image-20220411224100707](JUC%E7%BC%96%E7%A8%8B.assets/image-20220411224100707.png)
+
+
+
+```java
+@Slf4j(topic = "c.TestState")
+public class TestState {
+    public static void main(String[] args) throws IOException {
+        Thread t1 = new Thread("t1") {
+            @Override
+            public void run() {
+                log.debug("running...");
+            }
+        };
+
+        Thread t2 = new Thread("t2") {
+            @Override
+            public void run() {
+                while(true) { // runnable
+
+                }
+            }
+        };
+        t2.start();
+
+        Thread t3 = new Thread("t3") {
+            @Override
+            public void run() {
+                log.debug("running...");
+            }
+        };
+        t3.start();
+
+        Thread t4 = new Thread("t4") {
+            @Override
+            public void run() {
+                synchronized (TestState.class) {
+                    try {
+                        Thread.sleep(1000000); // timed_waiting
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
+        t4.start();
+
+        Thread t5 = new Thread("t5") {
+            @Override
+            public void run() {
+                try {
+                    t2.join(); 					// waiting
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        t5.start();
+
+        Thread t6 = new Thread("t6") {
+            @Override
+            public void run() {
+                synchronized (TestState.class) { // blocked
+                    try {
+                        Thread.sleep(1000000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
+        t6.start();
+
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        log.debug("t1 state {}", t1.getState());	//NEW
+        log.debug("t2 state {}", t2.getState());	//RUNNABLE
+        log.debug("t3 state {}", t3.getState());	//TERMINATED
+        log.debug("t4 state {}", t4.getState());	//TIMED_WAITING
+        log.debug("t5 state {}", t5.getState());	//WAITING
+        log.debug("t6 state {}", t6.getState());	//BLOCKED
+        System.in.read();
+    }
+}
+```
+
