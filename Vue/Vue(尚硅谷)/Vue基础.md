@@ -154,7 +154,9 @@ https://github.com/vuejs/devtools#vue-devtools
 
 
 
-`{{ }}`中应为JS表达式。特别的，可以引用Vue实例的data对象中定义的属性
+`{{ }}`中应为JS表达式。特别的，可以引用Vue实例的属性及Vue实例原型的属性
+
+>Vue的data对象中定义的属性，将变成Vue实例的属性
 
 
 
@@ -383,3 +385,154 @@ data属性：
 # MVVM模型
 
 https://www.bilibili.com/video/BV1Zy4y1K7SH?p=10&spm_id_from=pageDriver
+
+![image-20220411113957603](Vue%E5%9F%BA%E7%A1%80.assets/image-20220411113957603.png)
+
+- M：模型（Model），一般JS对象，***对应Vue实例的data属性***
+
+- V：视图（view），模板，***对应着HTML页面***
+
+- VM：视图模型（ViewModel），***对应着Vue实例对象***
+
+  > 因此往往用变量名vm，命名Vue实例
+
+
+
+# 数据代理
+
+## Object.defineproperty()方法的基本配置
+
+通过使用`Object.defineproperty()`方法实现
+
+```html
+<script>
+    let person = {
+        name:'zhangsan',
+        sex:'male',
+    };
+
+
+    Object.defineProperty(person,'age',{
+        value:18,
+        enumerable:true,
+        writable:true,
+        configurable:true,
+    });
+</script>
+```
+
+
+
+> 若配置项对象中无enumerable为true，则以这种方式添加的属性，***是不可被枚举的***
+>
+> ```html
+> <script>
+>     //以下两种方式不能获取到age属性
+>   
+>     console.log(Object.keys(person));
+> 
+>     for(let key in person){
+>         console.log(person[key]);
+>     }
+> </script>
+> ```
+
+>若配置项对象中无writable为true，则以这种方式添加的属性，***是不可被修改的***
+
+> 若配置项对象中无configurable为true，则以这种方式添加的属性，***是不可被删除的***
+>
+> ```html
+> <script>
+> 	delete person.age;
+> </script>
+> ```
+
+
+
+##Object.defineproperty()方法的setter和getter
+
+```html
+<script>
+    let age = 18;
+    let person = {
+        name:'zhangsan',
+        sex:'male',
+    };
+
+    Object.defineProperty(person,'age',{
+        //当有人读取person对象的age属性时，该方法被调用，返回值将成为age的值
+        get:function(){
+            return age;
+        },
+
+        //当有人修改Person对象的age属性时，该方法被调用，value即为待修改值
+        set(value){
+            console.log(value);
+            age = value;	//注意，person对象的age属性来源于age变量
+        },
+    });
+</script>
+```
+
+
+
+## 数据代理
+
+数据代理：使用一个对象，代理另一个对象的读写操作
+
+```html
+<script>
+    let obj1 = { x: 100 };
+    let obj2 = { y: 100 };
+
+    Object.defineProperty(obj2, 'x', {
+        get() {
+            return obj1.x;
+        },
+
+        set(value) {
+            obj1.x = value;
+        }
+    });
+</script>
+```
+
+
+
+## Vue中的数据代理
+
+```html
+<script>
+    let data = {
+        name : 'xiaowang'
+    };
+
+    let vm = new Vue({
+        el:"#root",
+        data
+    });
+</script>
+```
+
+> Vue实例的_data属性，即为传入的配置对象的data属性。即存在`vm._data === data`;
+
+
+
+小总结：
+
+1. 创建Vue实例时的配置对象，其data属性将被赋值给Vue实例的_data属性
+
+2. 采用数据代理的方式，将Vue实例的_data属性，直接由Vue实例代理
+
+   >***这一步的目的是简化编码***
+
+   <img src="Vue%E5%9F%BA%E7%A1%80.assets/image-20220411124621639.png" alt="image-20220411124621639" style="zoom:50%;" />
+
+   
+
+
+
+
+
+# 事件处理
+
