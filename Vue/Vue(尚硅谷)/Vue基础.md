@@ -427,13 +427,13 @@ https://www.bilibili.com/video/BV1Zy4y1K7SH?p=10&spm_id_from=pageDriver
 >
 > ```html
 > <script>
->     //以下两种方式不能获取到age属性
->   
->     console.log(Object.keys(person));
+>  //以下两种方式不能获取到age属性
 > 
->     for(let key in person){
->         console.log(person[key]);
->     }
+>  console.log(Object.keys(person));
+> 
+>  for(let key in person){
+>      console.log(person[key]);
+>  }
 > </script>
 > ```
 
@@ -553,7 +553,6 @@ https://www.bilibili.com/video/BV1Zy4y1K7SH?p=10&spm_id_from=pageDriver
 
 
 ```html
-
 <div id="root">
     <button v-on:click="showInfo(100,$event)">click me to alert msg</button>
 </div>
@@ -866,7 +865,7 @@ Vue默认不进行深度监视，需要配置deep属性：
 
 -  deep为false：只会监视numbers对象（即地址），并不会监视numbers对象内部
 
-- deep为true：会监视numbers对象内部的变化
+-  deep为true：会监视numbers对象内部的变化
 
 
 
@@ -941,20 +940,20 @@ Vue默认不进行深度监视，需要配置deep属性：
 
 - $watch()方式：
 
-   ```html
-   <script>
-       const vm = new Vue({
-           el:"#root",
-           data:{
-               isHot:false,
-           },
-       });
-   
-       vm.$watch('isHot',function(newValue,oldValue){
-           //函数体
-       });
-   </script>
-   ```
+  ```html
+  <script>
+      const vm = new Vue({
+          el:"#root",
+          data:{
+              isHot:false,
+          },
+      });
+  
+      vm.$watch('isHot',function(newValue,oldValue){
+          //函数体
+      });
+  </script>
+  ```
 
   
 
@@ -968,4 +967,668 @@ Vue默认不进行深度监视，需要配置deep属性：
 
 # class 与 style 绑定
 
-https://www.bilibili.com/video/BV1Zy4y1K7SH?p=26&spm_id_from=pageDriver
+***class绑定与style绑定，需要使用`v-bind指令`***
+
+## 绑定class
+
+三种用法：
+
+- 字符串写法
+- 数组写法（样式名字符串组成的数组）
+- 对象写法（对象的属性，为class名和布尔值）
+
+
+
+```html
+<body>
+    <div id="root">
+        <!-- v-bind:指令，简写为: -->
+        <div class="basic" :class="mood" @click="changeMood">
+            {{name}}
+        </div>
+
+        <div class="basic" :class="classArr">
+            {{name}}
+        </div>
+
+        <div class="basic" :class="classObj">
+            {{name}}
+        </div>
+    </div>
+
+
+    <script>
+        new Vue({
+            el:"#root",
+            data:{
+                name:'xiaowang',
+                
+                //字符串写法
+                mood:"normal",
+                //数组写法
+                classArr:['atguigu1','atguigu2','atguigu3'],
+                //对象写法
+                classObj:{
+                    atguigu1:true,
+                    atguigu2:true,
+                }
+            },
+            methods: {
+                changeMood(){
+                    const arr = ["happy","sad","normal"];
+                    const randomIndex = Math.floor(Math.random()*3);
+                    this.mood = arr[randomIndex];
+                }
+            },
+        });
+
+    </script>
+</body>
+```
+
+
+
+## 绑定style
+
+两种用法：
+
+- 对象写法（对象的属性，即为style名和样式值）
+- 数组写法（数组内的每一个元素，是一个对象）
+
+
+
+```html
+<body>
+    <div id="root">
+        
+        <div class="basic" :style="styleObj">{{name}}</div>
+        <div class="basic" :style="styleArr">{{name}}</div>
+    </div>
+</body>
+
+<script type="text/javascript">
+    Vue.config.productionTip = false
+
+    const vm = new Vue({
+        el:'#root',
+        data:{
+            name:'尚硅谷',
+            
+            //对象写法
+            styleObj:{
+                backgroundColor:'orange'
+            },
+            //数组写法
+            styleArr:[
+                {
+                    fontSize: '40px',
+                    color:'blue',
+                },
+                {
+                    backgroundColor:'gray'
+                }
+            ]
+        }
+    })
+</script>
+```
+
+
+
+
+
+# 渲染相关
+
+## 条件渲染
+
+- `v-if`指令，`v-else-if`指令，`v-else`指令：
+
+  若条件不满足，则该dom节点将不存在于html页面
+
+- `v-show`指令：
+
+  若条件不满足，则设置该节点的样式为：**display:none**
+
+> v-show更适用于节点切换频繁的情况
+
+
+
+```html
+<div id="root">
+    <button @click="a++">click me to add a</button>
+
+    <div v-if="a === 1">1</div>
+    <div v-else-if="a === 2">2</div>
+    <div v-else>not 1 or 2</div>
+
+    <div v-show="a === 1">this div is shown</div>
+</div>
+
+<script>
+    new Vue({
+        el:"#root",
+        data:{
+            a:0,
+        },
+    });
+</script>
+```
+
+
+
+特别的，***可以使用\<template>元素，其不会破坏HTML结构***：
+
+```html
+<div id="root">
+    <button @click="flag = !flag;">click me</button>
+
+    <template v-if="flag">
+        <h1>a</h1>
+        <h1>b</h1>
+    </template>
+</div>
+
+
+<script>
+    new Vue({
+        el:"#root",
+        data:{
+            flag : true,
+        },
+    });
+</script>
+```
+
+> template元素，仅可配置v-if指令使用
+
+
+
+## 列表渲染
+
+列表渲染，使用`v-for`指令：
+
+- 遍历数组
+- 遍历对象
+- 遍历字符串
+- 遍历指定次数
+
+
+
+```html
+<div id="root">
+    <!-- 遍历数组 -->
+    <ul>
+        <li v-for="(p,index) in persons" v-bind:key="p.id">
+            {{p.name}}-{{p.age}}
+        </li>
+    </ul>
+
+    <!-- 遍历对象 -->
+    <ul>
+        <li v-for="(propValue,propName) in car" :key="propName">
+            {{propName}}-{{propValue}}
+        </li>
+    </ul>
+
+    <!-- 遍历字符串 -->
+    <ul>
+        <li v-for="(c,index) in str" :key="index">
+            {{c}}-{{index}}
+        </li>
+    </ul>
+
+    <!-- 遍历指定次数 -->
+    <ul>
+        <li v-for="(num,index) of 5" :key="index">
+            {{num}}-{{index}}
+        </li> 
+    </ul>
+</div>
+
+
+<script>
+    new Vue({
+        el: "#root",
+        data: {
+            persons: [
+                { id: 1, name: 'zhangsan', age: 18 },
+                { id: 2, name: 'lisi', age: 19 },
+                { id: 3, name: 'wangwu', age: 20 },
+            ],
+
+            car:{
+                name:"奥迪",
+                price:"70W"
+            },
+
+            str:"abcdefg",
+        },
+    });
+</script>
+```
+
+
+
+### key的作用与原理
+
+- 虚拟DOM中key的作用：
+
+  ***key是虚拟DOM对象的唯一标识***，Vue会对key值相同的“新虚拟DOM”和“旧虚拟DOM”进行diff算法，从而更新虚拟DOM对象中不相同的虚拟DOM节点，而保留相同的虚拟机DOM节点。
+
+  > 用户的输入，是保留在真实DOM中的；在虚拟DOM中，input框是相同的
+
+> 特别的，若未指定key，则默认使用index作为key
+
+
+
+在实践上：
+
+- 数据存在标识，则使用其作为key
+- 若无逆序删除、增加操作，可以使用index作为key
+
+
+
+
+
+经典的问题案例：
+
+```html    <div id="root">
+<div id="root">
+    <button @click.once="addPerson">click me to add a person</button>
+
+    <ul>
+        <li v-for="(p,index) in persons" v-bind:key="index">
+            {{p.name}}-{{p.age}}
+            <input type="text">
+        </li>
+    </ul>
+</div>
+
+
+<script>
+    new Vue({
+        el: "#root",
+        data: {
+            persons: [
+                { id: 1, name: 'zhangsan', age: 18 },
+                { id: 2, name: 'lisi', age: 19 },
+                { id: 3, name: 'wangwu', age: 20 },
+            ],
+        },
+        methods: {
+            addPerson(){
+                const p ={id: 4, name: 'zhaosi', age: 18};
+                this.persons.unshift(p);
+
+            },
+        },
+    });
+</script>
+```
+
+问题分析：
+
+![image-20220412150157808](Vue%E5%9F%BA%E7%A1%80.assets/image-20220412150157808.png)
+
+![image-20220412150552035](Vue%E5%9F%BA%E7%A1%80.assets/image-20220412150552035.png)
+
+
+
+
+
+###案例——列表过滤
+
+```html
+<div id="root">
+    <input type="text" placeholder="请输入名字" v-model="keyword">
+
+    <ul>
+        <li v-for="p in filterPersons" :key="p.id">
+            {{p.name}}-{{p.age}}-{{p.sex}}
+        </li>
+    </ul>
+</div>
+
+
+<script>
+    //计算属性实现
+    new Vue({
+        el: "#root",
+        data: {
+            keyword: '',
+            persons: [
+                { id: 1, name: "马冬梅", age: 18, sex: '女' },
+                { id: 2, name: "周冬雨", age: 19, sex: '女' },
+                { id: 3, name: "周杰伦", age: 20, sex: '男' },
+                { id: 4, name: "温兆伦", age: 21, sex: '男' },
+            ],
+        },
+        computed:{
+            filterPersons(){
+                return this.persons.filter((p)=>{
+                    return p.name.indexOf(this.keyword) != -1;
+                });
+            }
+        }
+    });
+
+
+    //watch实现
+    // new Vue({
+    //     el: "#root",
+    //     data: {
+    //         keyword: '',
+    //         persons: [
+    //             { id: 1, name: "马冬梅", age: 18, sex: '女' },
+    //             { id: 2, name: "周冬雨", age: 19, sex: '女' },
+    //             { id: 3, name: "周杰伦", age: 20, sex: '男' },
+    //             { id: 4, name: "温兆伦", age: 21, sex: '男' },
+    //         ],
+    //         filterPersons: [],
+    //     },
+    //     watch: {
+    //         keyword: {
+    //             immediate: true,
+    //             handler: function (val) {
+    //                 //filter不影响原数组，返回新的结果数组
+    //                 this.filterPersons = this.persons.filter((p) => {
+    //                     //p为Persons数组的一个对象元素
+    //                     return p.name.indexOf(val) !== -1;
+    //                 });
+    //             }
+    //         }
+    //     }
+    // });
+</script>
+```
+
+
+
+### 案例——列表排序
+
+```html
+<div id="root">
+    <input type="text" placeholder="请输入名字" v-model="keyword">
+    <button @click="sortType = 2 ">按年龄升序</button>
+    <button @click="sortType = 1">按年龄降序</button>
+    <button @click="sortType = 0">按年龄原序</button>
+
+
+    <ul>
+        <li v-for="p in filterPersons" :key="p.id">
+            {{p.name}}-{{p.age}}-{{p.sex}}
+        </li>
+    </ul>
+</div>
+
+
+<script>
+    //计算属性实现
+    new Vue({
+        el: "#root",
+        data: {
+            keyword: '',
+            sortType: 0,    //0为原顺序；1降序；2升序
+            persons: [
+                { id: 1, name: "马冬梅", age: 18, sex: '女' },
+                { id: 2, name: "周冬雨", age: 19, sex: '女' },
+                { id: 3, name: "周杰伦", age: 20, sex: '男' },
+                { id: 4, name: "温兆伦", age: 21, sex: '男' },
+            ],
+        },
+        computed: {
+            filterPersons() {
+                const arr = this.persons.filter((p) => {
+                    return p.name.indexOf(this.keyword) != -1;
+                });
+
+
+                if (this.sortType) {
+                    arr.sort((p1, p2) => {
+                        return this.sortType === 1 ? p2.age - p1.age : p1.age - p2.age;
+                    });
+                }
+
+                return arr;
+            }
+        }
+    });
+</script>
+```
+
+
+
+# Vue检测数据变化的原理（数据劫持）
+
+数据劫持：能够监测到这个对象的数据变化的一种设计模式
+
+
+
+## 监测对象的基本原理
+
+基本原理：
+
+```html
+<script>
+
+    //构造函数
+    function Observer(obj) {
+        const keys = Object.keys(obj);
+
+        keys.forEach((k) => {
+            //this即当前的Observer实例对象
+            Object.defineProperty(this, k, {
+                get() {
+                    return obj[k];
+                },
+                set(val) {
+                    //使用diff算法，更新虚拟DOM
+                    obj[k] = val;
+                }
+            });
+        });
+    };
+
+
+    let data = {
+        name: '尚硅谷',
+        address: '北京',
+    };
+
+    const obs = new Observer(data);
+    let vm = {};
+    vm._data = obs;
+</script>
+```
+
+> 相较于此案例，Vue更完善在：
+>
+> - Vue对_data对象也做了数据代理
+> - 除了直接可见的对象：
+>   - data对象中的对象，也做了defineProperty
+>   - data数组中的对象，也做了defineProperty
+
+
+
+## Vue.set()
+
+```html
+<script>
+    const vm = new Vue({
+        el:"#root",
+        data:{
+            student:{
+                name:'tom',
+                age:18,
+            }
+        },
+    });
+
+    // not work：因为没有对应的setter
+    // vm.student.sex = '男';
+
+    //下面两种都可以
+    Vue.set(vm.student,'sex','男');
+    vm.$set(vm.student,'sex','男');
+</script>
+```
+
+
+
+但此方法，***不能用于给Vue实例追加属性***：
+
+```html
+<script>
+    const vm = new Vue({
+    el:"#root",
+    data:{
+    name:'xiaowang',
+    },
+    });
+
+    //下面两种都将报错：不能给Vue实例追加属性
+    Vue.set(vm,'sex','男');
+    vm.$set(vm,'sex','男');
+</script>
+```
+
+
+
+## 监测数组内元素变化的基本原理
+
+```html
+<div id="root">
+
+    <h2>姓名：{{student.name}}</h2>
+    <ul>
+        <li v-for="(h,index) in student.hobbies" :key="index">
+            {{h}}
+        </li>
+    </ul>
+
+</div>
+
+
+<script>
+    const vm = new Vue({
+        el: "#root",
+        data: {
+            student: {
+                name: 'tom',
+                hobbies: ['乒乓球', '羽毛球', '篮球'],
+            },
+        },
+    });
+</script>
+```
+
+- 通过数组的索引修改数组内的数据时，由于没有相应的setter，Vue无法监测到数据变化：
+
+  ![image-20220412171107057](Vue%E5%9F%BA%E7%A1%80.assets/image-20220412171107057.png)
+
+- ***仅当使用API操作数组内的元素时，Vue才可监测到变化***：
+
+  - push
+  - pop
+  - shift
+  - unshift
+  - splice
+  - sort
+  - reverse
+
+  > 这些方法的共同特点是：可以改变原数组。诸如filter方法是不改变原数组的
+
+  > 事实上，也可以使用Vue.set()方法：
+  >
+  > ```js
+  > Vue.set(vm.student.hobbies,1,'打台球');
+  > ```
+
+
+
+原理：
+
+***这些方法不再是Array.prototype上的方法，而是包装后的方法***。[官网链接](https://cn.vuejs.org/v2/guide/list.html#%E5%8F%98%E6%9B%B4%E6%96%B9%E6%B3%95)
+
+
+
+
+
+## 经典的not work案例
+
+```html
+<body>
+    <div id="root">
+        <button @click="updateData">点击更新</button>
+        <ul>
+            <li v-for="p in persons" :key="p.id">
+                {{p.name}}-{{p.age}}-{{p.sex}}
+            </li>
+        </ul>
+    </div>
+
+    <script>
+        new Vue({
+            el: "#root",
+            data: {
+                keyword: '',
+                persons: [
+                    { id: 1, name: "马冬梅", age: 18, sex: '女' },
+                    { id: 2, name: "周冬雨", age: 19, sex: '女' },
+                    { id: 3, name: "周杰伦", age: 20, sex: '男' },
+                    { id: 4, name: "温兆伦", age: 21, sex: '男' },
+                ],
+            },
+            methods: {
+                updateData() {
+                    //ok
+                    // this.persons[0].age = 25;
+
+                    //not work
+                    // this.persons[0] = { id: 1, name: "马冬梅", age: 25, sex: '女' };
+                    this.persons.splice(0,1,{ id: 1, name: "马冬梅", age: 25, sex: '女' });
+                }
+            },
+        });
+    </script>
+</body>
+```
+
+
+
+## 总结
+
+- Vue会监视data中的所有层次的数据
+
+- Vue如何监测对象中的数据变化：
+
+  - 递归的对data中的所有对象，利用Object.defineproperty()实现数据代理
+
+  - 如何追加对象：
+
+    ```html
+    <script>
+        Vue.set(target,propertyName/index,value);
+        vm.$set(target,propertyName/index,value);
+    </script>
+    ```
+
+    > 注意，这两个方法不能对 vm对象 或 vm的根数据对象_data追加
+
+- Vue如何监测***数组中元素***的变化：
+
+  对原生的Array.prototype的方法进行了包装
+
+  > 注意：
+  >
+  > - 对于整个数组对象，仍利用Object.defineproperty()实现的数据代理机制
+  > - 对于数组中某个对象元素，采用的是数据代理
+  > - 只有对诸如 `更改第k个元素为一个新元素`、`增加新元素`时，才利用到包装机制
+
+
+
+
+
+# 收集表单数据
+
+https://www.bilibili.com/video/BV1Zy4y1K7SH?p=38&spm_id_from=pageDriver
