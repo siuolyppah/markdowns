@@ -1632,3 +1632,127 @@ Vue默认不进行深度监视，需要配置deep属性：
 # 收集表单数据
 
 https://www.bilibili.com/video/BV1Zy4y1K7SH?p=38&spm_id_from=pageDriver
+
+
+
+```html
+<body>
+    <div id="root">
+
+        <form @submit.prevent ="submit">
+            <!-- 普通input框 -->
+                <!-- 去掉前后空格 -->
+            账号：<input type="text" v-model.trim="userInfo.account"> <br/>
+            密码：<input type="password" v-model="userInfo.password"> <br/>
+                <!-- 将输入的数据，绑定为number类型数据 -->
+            年龄：<input type="number" v-model.number="userInfo.age"><br/>
+
+            <!-- 单选框 -->
+            性别：
+                男<input type="radio" name="sex" value="male" v-model="userInfo.sex">
+                女<input type="radio" name="sex" value="female" v-model="userInfo.sex"><br/>
+
+            <!-- 复选框 -->
+            爱好：
+                学习<input type="checkbox" name="hobby" value="learning" v-model="userInfo.hobby">
+                运动<input type="checkbox" name="hobby" value="sport" v-model="userInfo.hobby">
+                看视频<input type="checkbox" name="hobby" value="watchVideo" v-model="userInfo.hobby">  </br>
+
+            <!-- 下拉列表 -->
+            所属校区：
+            <select v-model="userInfo.belongCity">
+                <option value="">请选择校区</option>
+                <option value="beijing">北京</option>
+                <option value="shanghai">上海</option>
+                <option value="shenzhen">深圳</option>
+            </select>   </br>
+
+            <!-- textarea -->
+            其他信息：
+            <textarea v-model="userInfo.otherInfo"></textarea> <br>
+
+            <!-- 没有value属性的复选框 -->
+                <!-- 当失去焦点时，才更新绑定数据 -->
+            <input type="checkbox" v-model.lazy="userInfo.agree">阅读并接受<a href="http://www.baidu.com">《用户协议》</a>
+            <button>提交</button>
+        </form>
+
+    </div>
+
+
+    <script>
+        new Vue({
+            el:"#root",
+            data:{
+                userInfo:{
+                    account:'',
+                    password:'',
+                    age:'',
+                    sex:'male',   //默认勾选male
+                    hobby:[],     //hobby的初始值能够影响接下来Vue的行为。
+                    belongCity:'beijing',    //默认选择北京
+                    otherInfo:'',
+                    agree:'',
+                }
+            },
+            methods: {
+                submit(){
+                    //通过.prevent阻止表单提交的默认行为：刷新页面
+
+                    //最好不要直接访问this._data，而是应该将数据放在一个对象里
+                    // let json_data = JSON.stringify(this._data);
+
+                    console.log("表单提交");
+                    let json_data = JSON.stringify(this.userInfo);
+
+                    console.log(json_data);
+                }
+            },
+        });
+
+    </script>
+</body>
+```
+
+
+
+效果如下：
+
+![image-20220419221508519](Vue%E5%9F%BA%E7%A1%80.assets/image-20220419221508519.png)![image-20220419221514970](Vue%E5%9F%BA%E7%A1%80.assets/image-20220419221514970.png)
+
+ 
+
+> 回顾：v-model指令，收集的是html元素的value属性
+
+- type="text"：v-model收集的即为用户输入的数据
+
+- type="raido"：
+
+  - 若该input元素未配置value属性，则收集的为布尔值（即checked）
+  - 若配置有value属性，则收集的是value属性
+
+- type="checkbox"：
+
+  - 若该input元素未配置value属性，则收集的为布尔值（即checked）
+
+  - 若配置有value属性，则收集的是value属性
+
+    > 注意，Vue的data的类型，会影响vue收集到的数据的类型：
+    >
+    > - ***若初始化为非数组：则收集的仍为checked***
+    > - 若初始化为数组，则收集的是value组成的数组
+
+
+
+v-model有三个修饰符：
+
+- lazy：失去焦点时才收集数据
+- number：将收集到的字符串转为有效的数字
+- trim：去除字符串首尾空格
+
+
+
+# 过滤器
+
+https://www.bilibili.com/video/BV1Zy4y1K7SH?p=39
+
