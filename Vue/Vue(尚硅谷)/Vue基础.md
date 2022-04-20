@@ -1756,3 +1756,109 @@ v-model有三个修饰符：
 
 https://www.bilibili.com/video/BV1Zy4y1K7SH?p=39
 
+```html
+<body>
+    <div id="root">
+        <!-- methods实现 -->
+        <h3>当前时间为:{{getFmtTime()}}</h3>
+
+        <!-- 计算属性实现 -->
+        <h3>当前时间为:{{fmtTime}}</h3>
+
+        <!-- 过滤器实现 -->
+        <h3>当前时间为:{{time | timeFormater() | slice}}</h3>
+    </div>
+
+
+    <script>
+        
+        // 全局过滤器，于创建Vue实例前定义
+        Vue.filter('slice',function(value){
+            return value.slice(0,4);
+        });
+        
+        new Vue({
+            el:"#root",
+            data:{
+                time:Date.now(),
+            },
+            methods: {
+                getFmtTime(){
+                    return dayjs(this.time).format('YYYY-MM-DD HH:mm:ss');
+                }
+            },
+            computed:{
+                fmtTime(){
+                    return dayjs(this.time).format('YYYY-MM-DD HH:mm:ss');
+                }
+            },
+            // 局部过滤器，仅此Vue实例可用
+            filters:{
+                timeFormater(value,formatStr='YYYY-MM-DD HH:mm:ss'){
+                    return dayjs(value).format(formatStr);
+                },
+            }
+        });
+
+    </script>
+</body>
+```
+
+
+
+过滤器有两种注册方式：
+
+- 全局方式：
+
+  ```javascript
+  // 全局过滤器，于创建Vue实例前定义
+  Vue.filter('slice',function(value){
+      return value.slice(0,4);
+  });
+  ```
+
+- 局部方式：
+
+  ```javascript
+  new Vue({
+      // 局部过滤器，仅此Vue实例可用
+      filters:{
+          timeFormater(value,formatStr='YYYY-MM-DD HH:mm:ss'){
+              return dayjs(value).format(formatStr);
+          },
+      }
+  });
+  ```
+
+  
+
+过滤器的适用语法：
+
+- 插值语法：`{{xxx | 过滤器名}}`
+
+- 指令语法：`v-bind:属性 = "xxx | 过滤器名"`
+
+  > 传递给过滤器函数的第一个参数，一定为xxx
+
+
+
+# 内置指令
+
+目前为止，用过的内置指令：
+
+| 指令    | 说明                                   |
+| ------- | -------------------------------------- |
+| v-bind  | 单向绑定解析表达式，可简写为 `:xxx`    |
+| v-model | 双向数据绑定                           |
+| v-for   | 遍历数组/对象/字符串                   |
+| v-on    | 绑定事件监听，可简写为 `@xxx`          |
+| v-if    | 条件渲染（动态控制节点是否***存在***） |
+| v-else  | 条件渲染（动态控制节点是否***存在***） |
+| v-show  | 条件渲染（动态控制节点是否***展示***） |
+
+
+
+## v-text指令
+
+https://www.bilibili.com/video/BV1Zy4y1K7SH?p=40&spm_id_from=pageDriver
+
