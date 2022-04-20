@@ -1860,5 +1860,156 @@ https://www.bilibili.com/video/BV1Zy4y1K7SH?p=39
 
 ## v-text指令
 
-https://www.bilibili.com/video/BV1Zy4y1K7SH?p=40&spm_id_from=pageDriver
+```html
+<body>
+    <div id="root">
+        <h1 v-text="name"></h1>
+    </div>
 
+    <script>
+        new Vue({
+            el:"#root",
+            data:{
+                name:"尚硅谷",
+            },
+        });
+
+    </script>
+</body>
+```
+
+
+
+v-text指令：
+
+- 作用：向其所在的节点内，渲染文本内容。
+- 注意：
+  1. 会完全替换元素内 的文本内容
+  2. 形如"\<h1>hello\</h1>"的内容，将原样显示
+
+
+
+## v-html指令
+
+相比于v-text指令，v-html指令支持渲染html元素，例如：
+
+```html
+<body>
+    <div id="root">
+        <h1 v-html="name"></h1>
+    </div>
+
+
+    <script>
+        new Vue({
+            el:"#root",
+            data:{
+                name:"<h1>尚硅谷</h1>",
+            },
+        });
+
+    </script>
+</body>
+```
+
+
+
+> 由于v-html指令将渲染页面元素，可能导致Cookie被盗取和XSS攻击
+
+
+
+## v-cloak指令
+
+v-cloak指令，用于解决网速过慢，请求vue资源耗时过长，导致的html页面“闪现”问题
+
+
+
+v-cloak指令，会在Vue开始工作时，从html元素中删除该属性。一般结合CSS使用
+
+```html
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    
+    <style>
+        [v-cloak]{
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <h1 v-cloak>{{name}}</h1>
+    </div>
+
+    <script src="../js/vue.js"></script>
+
+    <script>
+        new Vue({
+            el:"#root",
+            data:{
+                name:"尚硅谷",
+            },
+        });
+
+    </script>
+</body>
+```
+
+
+
+## v-once指令
+
+v-once所在的html节点，在进行初次动态渲染后，就视为静态内容。
+
+之后的数据改变，并不会引起v-once所在结构的更新，可以用于优化性能。
+
+```html
+<body>
+    <div id="root">
+        <h3 v-once>初始n为：{{n}}</h3>
+        <h3>当前n为：{{n}}</h3>
+        <button @click="n++">click me to add n</button>
+    </div>
+
+    <script>
+        new Vue({
+            el: "#root",
+            data: {
+                n: 1,
+            }
+        });
+    </script>
+</body>
+```
+
+
+
+## v-pre指令
+
+注有v-pre指令的节点，将在解析时被跳过，***可以用在没有使用指令语法、插值语法的节点***，以加快编译。
+
+```html
+<body>
+    <div id="root">
+        <h3 v-pre>welcome</h3>
+        <h3>当前n为：{{n}}</h3>
+        <button @click="n++">click me to add n</button>
+    </div>
+
+    <script>
+        new Vue({
+            el: "#root",
+            data: {
+                n: 1,
+            }
+        });
+    </script>
+</body>
+```
+
+
+
+# 自定义指令
+
+https://www.bilibili.com/video/BV1Zy4y1K7SH?p=45&spm_id_from=pageDriver
