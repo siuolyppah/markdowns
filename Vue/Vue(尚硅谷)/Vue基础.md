@@ -427,13 +427,13 @@ https://www.bilibili.com/video/BV1Zy4y1K7SH?p=10&spm_id_from=pageDriver
 >
 > ```html
 > <script>
->  //以下两种方式不能获取到age属性
+> //以下两种方式不能获取到age属性
 > 
->  console.log(Object.keys(person));
+> console.log(Object.keys(person));
 > 
->  for(let key in person){
->      console.log(person[key]);
->  }
+> for(let key in person){
+>   console.log(person[key]);
+> }
 > </script>
 > ```
 
@@ -2146,4 +2146,261 @@ fbding指令：使得input元素获取焦点
 
 # 生命周期
 
-[尚硅谷Vue2.0+Vue3.0全套教程丨vuejs从入门到精通_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1Zy4y1K7SH?p=48)
+[生命周期](https://cn.vuejs.org/v2/guide/instance.html#%E5%AE%9E%E4%BE%8B%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E9%92%A9%E5%AD%90)：
+
+- 一组关于Vue生命周期的函数：
+
+  - 挂载流程：
+    1. beforeCreate
+    2. created
+    3. beforeMount
+
+  - 更新流程：
+    1. mounted
+    2. beforeUpdate
+    3. updated
+
+  - 销毁流程：
+    1. beforeDestory
+    2. destoryed：销毁后自定义事件将消失，但已绑定的DOM原生事件(如click）仍有效
+
+- 生命周期函数中的this，指向Vue实例或组件实例对象
+
+
+
+> 注意区分：生命周期与流程
+
+![生命周期](Vue%E5%9F%BA%E7%A1%80.assets/%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.png)
+
+
+
+```html
+<body>
+    <div id="root">
+        <h2 :style="{opacity}">欢迎学习Vue</h2>
+        <button @click="opacity = 1">透明度设置为1</button>
+        <button @click="stop">点我停止变换</button>
+    </div>
+</body>
+
+<script type="text/javascript">
+    new Vue({
+        el:'#root',
+        data:{
+            opacity:1
+        },
+        methods: {
+            stop(){
+                this.$destroy()
+            }
+        },
+
+        //Vue完成模板的解析并把初始的真实DOM元素放入页面后（挂载完毕）调用mounted
+        mounted(){
+            this.timer = setInterval(() => {
+                console.log('setInterval')
+                this.opacity -= 0.01
+                if(this.opacity <= 0) this.opacity = 1
+            },16)
+        },
+        beforeDestroy() {
+            clearInterval(this.timer)
+        },
+    });
+</script>
+```
+
+
+
+# 组件
+
+- 组件的定义：
+
+  实现应用中***<u>局部</u>功能的<u>代码</u>和<u>资源</u>的集合***
+
+
+
+## 非单文件组件
+
+> 即一个文件中(a.html)，包含了多个组件
+
+使用组件的步骤：
+
+1. 创建组件
+
+   - 无需el
+
+   - data必须写成函数
+
+2. 注册组件
+
+   - 局部注册
+
+   - 全局注册：将组件注册到所有<u>Vue实例</u>
+
+     ```html
+     <script>
+     	const gloabl_component = Vue.extend({...});
+     	Vue.component('gloabl_component',gloabl_component);
+     </script>
+     ```
+
+3. 使用组件
+
+   以<u>组件的**注册名**</u>作为标签名
+
+
+
+```html
+<body>
+    <div id="root">
+        <school></school>
+        <hr>
+        <student></student>
+    </div>
+
+    <script>
+        //创建school组件
+        const school = Vue.extend({
+            template:`
+                <div>
+                    <h2>学校名称：{{name}}</h2>
+                    <h2>学校地址：{{address}}</h2>
+                    <button @click="showName">click me</button>
+                </div>
+            `,
+            data() {
+                return {
+                    name: "尚硅谷",
+                    address: "上海"
+                }
+            },
+            methods:{
+                showName(){
+                    alert(this.name);
+                }
+            }
+        });
+
+        //创建student组件
+        const student = Vue.extend({
+            template:`
+                <div>
+                    <h2>学生姓名：{{name}}</h2>
+                    <h2>学生年龄：{{age}}</h2>
+                </div>
+            `,
+            data(){
+                return {
+                    name:"小明",
+                    age:18
+                }
+            }
+        });
+
+        new Vue({
+            el:"#root",
+            //局部注册
+            components:{
+                school:school,
+                //ES6的语法：当key和value相同时，可简写。等同student:student
+                student
+            }
+        });
+    </script>
+</body>
+```
+
+
+
+### 组件的注意点
+
+- 组件注册名的命名：
+
+  - 若仅由一个单词组成：纯小写 / 首字母大写
+  - 由多个单词组成：使用-分割的全小写  /  ***大驼峰命名（需要Vue脚手架支持）***
+
+  > 标签名，与组件的注册名完全一致
+
+- 组件在定义时，可以配置name选项，在Vue-dev中显示此name。
+
+  > 不影响组件使用时的标签名
+
+- 标签也可以是自闭合标签，***需要Vue脚手架支持***
+
+- 组件的创建，有**<u>简写形式</u>**：
+
+  ```html
+  <script>
+      const school = Vue.extend(options);
+      const school = options;
+  </script>
+  ```
+
+
+
+### 组件的嵌套
+
+```html
+<body>
+    
+    <div id="root">
+        <school></school>
+    </div>
+
+    <script>
+        const student = Vue.extend({
+            template:`
+                <div>
+                    <h2>学生姓名：{{name}}</h2>
+                    <h2>学生年龄：{{age}}</h2>
+                </div>
+            `,
+            data(){
+                return {
+                    name:"小明",
+                    age:18
+                }
+            }
+        });
+
+        const school = Vue.extend({
+            template:`
+                <div>
+                    <h2>学校名称：{{name}}</h2>
+                    <h2>学校地址：{{address}}</h2>
+                    <student></student>           
+                </div>
+            `,
+            data() {
+                return {
+                    name: "尚硅谷",
+                    address: "上海"
+                }
+            },
+            components:{
+                student
+            }
+        });
+
+        new Vue({
+            el:"#root",
+            components:{
+                school
+            }
+        });
+    </script>
+</body>
+```
+
+
+
+### VueComponent()构造函数
+
+[尚硅谷Vue2.0+Vue3.0全套教程丨vuejs从入门到精通_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1Zy4y1K7SH?p=57&spm_id_from=pageDriver)
+
+
+
+## 单文件组件
+
+> 即一个文件(a.vue)中，只包含单个组件
