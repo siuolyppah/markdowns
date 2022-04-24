@@ -2427,7 +2427,7 @@ fbding指令：使得input元素获取焦点
 
 
 
-## 单文件组件
+# 单文件组件
 
 > 即一个文件(a.vue)中，只包含单个组件
 
@@ -2476,7 +2476,7 @@ fbding指令：使得input元素获取焦点
 
 
 
-### 创建Vue脚手架
+## 创建Vue脚手架
 
 [Home | Vue CLI (vuejs.org)](https://cli.vuejs.org/zh/)
 
@@ -2531,7 +2531,7 @@ fbding指令：使得input元素获取焦点
 
 
 
-### 入门案例
+## 入门案例
 
 - public：
 
@@ -2639,39 +2639,6 @@ fbding指令：使得input元素获取焦点
 
     
 
+## render函数
 
-
-```vue
-<template>
-    <div class="demo">
-        <h2>学校名称：{{name}}</h2>
-        <h2>学校地址：{{address}}</h2>
-        <button @click="showName">click me</button>
-    </div>
-</template>
-
-<script>
-export default {
-    // 为组件起名，即在Vue-dev工具的提示
-    name:"School",
-    data(){
-        return {
-            name:"尚硅谷",
-            address:"上海"
-        }
-    },
-    methods:{
-        showName(){
-            alert(this.name);
-        }
-    }
-}
-</script>
-
-<style>
-    .demo{
-        background-color: orange;
-    }
-</style>
-```
-
+[尚硅谷Vue2.0+Vue3.0全套教程丨vuejs从入门到精通_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1Zy4y1K7SH?p=63&spm_id_from=pageDriver)
