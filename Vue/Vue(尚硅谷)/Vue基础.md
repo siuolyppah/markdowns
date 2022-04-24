@@ -2212,7 +2212,7 @@ fbding指令：使得input元素获取焦点
 
 
 
-# 组件
+# 组件化
 
 - 组件的定义：
 
@@ -2399,8 +2399,279 @@ fbding指令：使得input元素获取焦点
 
 [尚硅谷Vue2.0+Vue3.0全套教程丨vuejs从入门到精通_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1Zy4y1K7SH?p=57&spm_id_from=pageDriver)
 
+- Vue里的组件，本质是名为VueComponent的构造函数，是由Vue.extend()生成的
+
+- 对于HTML中的形如\<school>\</school>或\</school>，Vue在解析时将创建school组件的***实例对象***，即Vue调用new VueComponent(options)。
+
+  > 注意，每次调用Vue.extend()，返回的都是***全新的VueComponent()构造函数***
+
+- 关于this的指向问题：
+
+  - 在组件配置中：
+
+    data{},methos{},watch{},computed{}中的函数，均指向==VueComponent实例对象==(即对应的HTML标签实例)
+
+  - 在new Vue(options)配置中：
+
+    data{},methos{},watch{},computed{}中的函数，均指向Vue实例对象
+
+-   一个重要的内置关系：
+
+  ```javascript
+  VueComponent.prototype.__proto__ === Vue.prototype
+  ```
+
+  目的是为了，让<u>组件实例对象</u>，可以访问到<u>Vue原型</u>上的属性和方法。
+
+  ![image-20220424111741234](Vue%E5%9F%BA%E7%A1%80.assets/image-20220424111741234.png)
+
 
 
 ## 单文件组件
 
 > 即一个文件(a.vue)中，只包含单个组件
+
+.vue文件到.js文件，解决方案有：
+
+- 使用webpack搭建工作流
+- 使用Vue脚手架
+
+> 文件名，一般采用大驼峰命名法
+
+
+
+单文件组件的结构：
+
+- \<template>：组件的html结构
+
+  > 注意，template标签不参与结构编译，这意味着需要一个根标签
+
+- \<script>：组件交互相关的***代码***（数据、方法等）
+
+  ES6的模块化暴露：
+
+  - 分别暴露：
+
+    ```js
+    export const school = Vue.extend({....});
+    ```
+
+  - 统一暴露：
+
+    ```js
+    const school = Vue.extend({....});
+    export{school}
+    ```
+
+  - 默认暴露：
+
+    ```js
+    const school = Vue.extend({....});
+    export default shcool
+    ```
+
+  - 
+
+- \<style>：组件的样式
+
+
+
+### 创建Vue脚手架
+
+[Home | Vue CLI (vuejs.org)](https://cli.vuejs.org/zh/)
+
+安装步骤(Vue CLI 4.x版本)如下：
+
+1. 仅第一次执行：全局安装@vue/cli：
+
+   ```sh
+   npm install -g @vue/cli
+   npm install -g @vue/cli@4.5.13
+   ```
+
+   > 配置npm淘宝镜像：
+   >
+   > ```sh
+   > npm config set registry https://registry.npm.taobao.org
+   > ```
+
+2. ***切换到要创建项目的目录***，执行如下命令创建项目：
+
+   ```sh
+   vue create xxx
+   ```
+
+3. 启动项目：
+
+   ```sh
+   npm run serve
+   ```
+
+
+
+> Vue脚手架隐藏了所有webpack相关的配置，若想查看具体的webpack配置，执行：
+>
+> ```sh
+> vue inspect > output.js
+> ```
+
+
+
+项目结构：
+
+- public：
+  - index.html
+  - favicon.ico
+- src：
+  - components
+  - App.vue
+  - main.js：***整个项目的入口文件***
+
+
+
+
+
+### 入门案例
+
+- public：
+
+- src：
+
+  - components：
+
+    - Student.vue
+
+      ```vue
+      <template>
+      	<div>
+      		<h2>学生姓名：{{name}}</h2>
+      		<h2>学生年龄：{{age}}</h2>
+      	</div>
+      </template>
+      
+      <script>
+          // 默认暴露一个Object对象,即Vue.extend()的配置对象
+      	 export default {
+      		name:'Student',
+      		data(){
+      			return {
+      				name:'张三',
+      				age:18
+      			}
+      		}
+      	}
+      </script>
+      ```
+
+    - School.vue
+
+      ```vue
+      <template>
+      	<div class="demo">
+      		<h2>学校名称：{{name}}</h2>
+      		<h2>学校地址：{{address}}</h2>
+      		<button @click="showName">点我提示学校名</button>	
+      	</div>
+      </template>
+      
+      <script>
+      	 export default {
+      		name:'School',
+      		data(){
+      			return {
+      				name:'尚硅谷',
+      				address:'北京昌平'
+      			}
+      		},
+      		methods: {
+      			showName(){
+      				alert(this.name)
+      			}
+      		},
+      	}
+      </script>
+      
+      <style>
+      	.demo{
+      		background-color: orange;
+      	}
+      </style>
+      ```
+
+  - App.vue
+
+    ```vue
+    <template>
+    	<div>
+    		<School></School>
+    		<Student></Student>
+    	</div>
+    </template>
+    
+    <script>
+    	//引入组件
+    	import School from './components/School'
+    	import Student from './components/Student'
+    
+    	export default {
+    		name:'App',
+    		components:{
+    			School,
+    			Student
+    		}
+    	}
+    </script>
+    
+    ```
+
+  - main.js
+
+    ```js
+    import Vue from 'vue'
+    import App from './App.vue'
+    
+    Vue.config.productionTip = false
+    
+    new Vue({
+      render: h => h(App),
+    }).$mount('#app')
+    ```
+
+    
+
+
+
+```vue
+<template>
+    <div class="demo">
+        <h2>学校名称：{{name}}</h2>
+        <h2>学校地址：{{address}}</h2>
+        <button @click="showName">click me</button>
+    </div>
+</template>
+
+<script>
+export default {
+    // 为组件起名，即在Vue-dev工具的提示
+    name:"School",
+    data(){
+        return {
+            name:"尚硅谷",
+            address:"上海"
+        }
+    },
+    methods:{
+        showName(){
+            alert(this.name);
+        }
+    }
+}
+</script>
+
+<style>
+    .demo{
+        background-color: orange;
+    }
+</style>
+```
+

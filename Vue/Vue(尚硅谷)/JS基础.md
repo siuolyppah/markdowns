@@ -47,7 +47,33 @@ this的指向问题：
 
   
 
-![image-20220411221715341](C:/Users/G_xy/AppData/Roaming/Typora/typora-user-images/image-20220411221715341.png)
+# 原型
+
+- 构造函数.prototype：称为显式原型
+
+- 由构造函数生成的对象实例.\__proto__：称为隐式原型
+
+  显式原型和隐式原型指向的是同一个对象
+
+
+
+```javascript
+let consturct = function(){
+    this.a = 12;
+    this.b = 13;
+}
+
+let obj = new consturct();
+
+console.log(consturct.prototype === obj.__proto__);
+
+consturct.prototype.c = 13;
+console.log(obj.__proto__.c);
+//先寻找obj对象的c属性，发现没有之后，顺着原型链去原型对象上寻找
+console.log(obj.c);
+```
+
+
 
 
 
