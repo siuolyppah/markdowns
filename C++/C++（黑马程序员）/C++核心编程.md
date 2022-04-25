@@ -529,3 +529,613 @@ int main() {
 # 类与对象
 
 [黑马程序员匠心之作|C++教程从0到1入门编程,学习编程不再难_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1et411b73Z?p=99)
+
+## 类的定义
+
+> 属性和行为，都是类的***成员***
+
+
+
+```c++
+const double PI = 3.1415926;
+
+class Circle {
+public:
+    int r;
+
+    double getPerimeter() {
+        return 2 * PI * r;
+    }
+};
+
+int main() {
+
+    Circle circle;
+    circle.r = 10;
+    cout << circle.getPerimeter() << endl;
+
+
+    return 0;
+}
+```
+
+
+
+## 封装
+
+访问权限有三种：
+
+| 访问权限修饰符 |   权限   |                             说明                             |
+| :------------: | :------: | :----------------------------------------------------------: |
+|     public     | 公共权限 |                  类内可以访问，类外可以访问                  |
+|   protected    | 保护权限 | 类内可以访问，类外不可以访问。<br />子类可访问父类的保护权限 |
+|    private     | 私有权限 | 类内可以访问，类外不可以访问<br />子类不可访问父类的私有权限 |
+
+ 
+
+```c++
+class Person {
+public:
+    string name;
+protected:
+    string car;
+private:
+    string account;
+
+public:
+    void func() {
+        name = "小明";
+        car = "祖传车";
+        account = "abcdef";
+    }
+};
+
+int main() {
+
+    Person person;
+
+    cout << person.name << endl;
+    cout << person.car << endl;        //error
+    cout << person.account << endl;     //error
+    
+    return 0;
+}
+```
+
+
+
+### struct和class的区别
+
+区别在于：***默认的访问权限不同***：
+
+- struct：默认权限为public
+- class：默认权限为privaate
+
+
+
+```c++
+class C1
+{
+	int  m_A; //默认是私有权限
+};
+
+struct C2
+{
+	int m_A;  //默认是公共权限
+};
+
+int main() {
+
+	C1 c1;
+	c1.m_A = 10; //错误，访问权限是私有
+
+	C2 c2;
+	c2.m_A = 10; //正确，访问权限是公共
+    
+	return 0;
+}
+```
+
+
+
+## 对象的初始化和清理
+
+### 构造函数和析构函数
+
+- **构造函数**和**析构函数**会被被编译器自动调用，完成对象初始化和清理工作
+- 如果不提供构造函数和析构函数，则由编译器默认提供（空实现）
+
+
+
+- 构造函数：
+
+  创建对象时为对象的成员属性赋值，构造函数由编译器自动调用，无须手动调用
+
+- 析构函数：
+
+  在对象**销毁前**系统自动调用，执行一些清理工作
+
+
+
+**构造函数语法：**`类名(){}`
+
+1. 构造函数，没有返回值也不写void
+2. 函数名称与类名相同
+3. 构造函数可以有参数，因此***可以发生重载***
+4. 程序在调用对象时候会自动调用构造，无须手动调用,而且只会调用一次
+
+
+
+**析构函数语法：** `~类名(){}`
+
+1. 析构函数，没有返回值也不写void
+2. 函数名称与类名相同,在名称前加上符号  `~`
+3. ***析构函数不可以有参数，因此不可以发生重载***
+4. 程序在对象销毁前会自动调用析构，无须手动调用,而且只会调用一次
+
+
+
+```c++
+class Person
+{
+public:
+    //构造函数
+    Person()
+    {
+        cout << "Person的构造函数调用" << endl;
+    }
+    
+    //析构函数
+    ~Person()
+    {
+        cout << "Person的析构函数调用" << endl;
+    }
+
+};
+
+void test()
+{
+    Person p;
+}
+
+int main() {
+
+    test();
+    
+    return 0;
+}
+```
+
+
+
+### 构造函数的分类及调用
+
+构造函数可分为：
+
+- 按参数分为： 有参构造（***即默认构造函数***）和无参构造
+
+- 按类型分为： 普通构造和***拷贝构造***（要求形参有const和&限定）
+
+  ```c++
+  class Person {
+  public:
+      int age;
+  
+      //普通构造函数
+      Person() {}
+  
+      //拷贝构造函数
+      Person(const Person &person) {
+          age = person.age;
+      }
+  
+  };
+  ```
+
+
+
+三种调用方式：
+
+- 括号法
+
+  > 调用默认构造函数，不要带小括号。否则将会被编译器视为方法的声明。
+  >
+  > ```c++
+  > int main(){
+  >     //返回值类型为Person，方法名为p1
+  >     Person p1();	
+  > }
+  > ```
+
+- 显式法
+
+  > - 匿名对象：没有标识符的对象，当前行执行结束后，匿名对象将被回收
+  >
+  > - 不能用拷贝构造函数，初始化匿名对象
+  >
+  >   ```c++
+  >   int main(){
+  >       Person p1;
+  >       Person (p1);//ERROR，编译器会将其视为Person p1;
+  >   }
+  >   ```
+  >
+  >   
+
+- 隐式转换法
+
+```c++
+class Person {
+public:
+    int age;
+
+    Person() {
+        cout << "()" << endl;
+    }
+
+    Person(int age) {
+        cout << "(int)" << endl;
+    }
+
+    Person(const Person &person) {
+        age = person.age;
+        cout << "(const Person&)" << endl;
+    }
+
+};
+
+int main() {
+
+    //括号法
+    Person p1;              //默认构造函数
+    Person p2(10);
+    Person p3(p2);          //拷贝构造函数
+
+    //显式法
+    Person p4;
+    Person p5 = Person(10);
+    Person p6 = Person(p5);
+
+    //隐式转换法
+    Person p7 = 10; //等价于Person p7 = Person(10);
+    Person p8 = p7; //等价于Person p8 = Person(p7);
+
+    return 0;
+}
+```
+
+
+
+### 拷贝构造函数调用时机
+
+```c++
+class Person {
+public:
+    Person() {
+        cout << "()" << endl;
+    }
+
+    Person(const Person &person) {
+        cout << "const Person&" << endl;
+    }
+
+    ~Person() {
+        cout << "~" << endl;
+    }
+};
+```
+
+
+
+C++中拷贝构造函数调用时机通常有三种情况：
+
+* 使用一个已经创建完毕的对象来初始化一个新对象
+
+  ```c++
+  //使用已存在的对象，初始化新对象
+  void test1(){
+      Person p1;
+      Person p2(p1);
+  }
+  ```
+
+* **值传递**的方式给函数参数传值
+
+  ```c++
+  //形参p的创建，由拷贝构造而来
+  void test2(Person p){
+  }
+  
+  int main(){
+      Person p1;
+      test2(p1);
+  
+      return 0;
+  }
+  ```
+
+* 以**值传递**返回局部对象
+
+  ```c++
+  //p1变量本身会在函数执行完被释放；但函数将返回它的拷贝构造
+  Person test3(){
+      Person p1;
+      return p1;
+  }
+  ```
+
+  
+
+### 函数默认提供规则
+
+c++编译器至少给一个类添加3个函数：
+
+​	1．默认构造函数(无参，函数体为空)
+
+​	2．默认析构函数(无参，函数体为空)
+
+​	3．默认拷贝构造函数，对属性进行**值拷贝**(浅拷贝)
+
+
+
+同时存在如下规则：
+
+- 当用户编写有参构造函数时，不再默认提供无参构造，但仍存在默认拷贝构造
+- 当用户编写拷贝构造函数时，不再提供构造函数。
+
+
+
+```c++
+class Person {
+public:
+    //无参（默认）构造函数
+    Person() {
+        cout << "无参构造函数!" << endl;
+    }
+    //有参构造函数
+    Person(int a) {
+        age = a;
+        cout << "有参构造函数!" << endl;
+    }
+    //拷贝构造函数
+    Person(const Person& p) {
+        age = p.age;
+        cout << "拷贝构造函数!" << endl;
+    }
+    //析构函数
+    ~Person() {
+        cout << "析构函数!" << endl;
+    }
+public:
+    int age;
+};
+
+void test01()
+{
+    Person p1(18);
+    //如果不写拷贝构造，编译器会自动添加拷贝构造，并且做浅拷贝操作
+    Person p2(p1);
+
+    cout << "p2的年龄为： " << p2.age << endl;
+}
+
+void test02()
+{
+    //如果用户提供有参构造，编译器不会提供默认构造，会提供拷贝构造
+    Person p1; //此时如果用户自己没有提供默认构造，会出错
+    Person p2(10); //用户提供的有参
+    Person p3(p2); //此时如果用户没有提供拷贝构造，编译器会提供
+
+    //如果用户提供拷贝构造，编译器不会提供其他构造函数
+    Person p4; //此时如果用户自己没有提供默认构造，会出错
+    Person p5(10); //此时如果用户自己没有提供有参，会出错
+    Person p6(p5); //用户自己提供拷贝构造
+}
+
+int main() {
+
+    test01();
+
+    system("pause");
+
+    return 0;
+}
+```
+
+
+
+### 深拷贝与浅拷贝
+
+- 浅拷贝：简单的赋值拷贝操作
+
+  浅拷贝的隐患：
+
+  - 重复释放堆区
+
+- 深拷贝：在堆区重新申请空间，进行拷贝操作
+
+
+>如果属性有在堆区开辟的，一定要自己提供拷贝构造函数，防止浅拷贝带来的问题
+
+
+
+- 不同对象的成员，指向了同一堆区：
+
+  ```c++
+  class Person {
+  public:
+      int age;
+      int *ptr_height;
+  
+  public:
+      Person() {}
+  
+      Person(int age, int height) {
+          this->age = age;
+          this->ptr_height = new int(height);
+      }
+      ~Person() {
+          delete this->ptr_height;
+          ptr_height = nullptr;
+      }
+  };
+  
+  
+  int main() {
+  
+      Person p1(18, 180);
+      cout << p1.ptr_height << endl;  //0x1ce6c5718d0
+  
+      Person p2(p1);
+      cout << p2.ptr_height << endl;  //0x1ce6c5718d0
+  
+      return 0;
+  }
+  ```
+
+  解决方案：重写默认的拷贝构造函数；
+
+  ```c++
+  Person(const Person &person) {
+      this->age = person.age;
+      this->ptr_height = new int(*person.ptr_height);
+  }
+  ```
+
+
+
+### 初始化列表
+
+**语法：**`构造函数()：属性1(值1),属性2（值2）... {}`
+
+```c++
+class Person {
+public:
+
+	////传统方式初始化
+	//Person(int a, int b, int c) {
+	//	m_A = a;
+	//	m_B = b;
+	//	m_C = c;
+	//}
+
+	//初始化列表方式初始化
+	Person(int a, int b, int c) :m_A(a), m_B(b), m_C(c) {}
+
+private:
+	int m_A;
+	int m_B;
+	int m_C;
+};
+
+int main() {
+	Person p(1, 2, 3);
+	return 0;
+}
+```
+
+
+
+### 类对象作为类成员
+
+C++类中的成员可以是另一个类的对象，我们称该成员为 ***对象成员***
+
+
+
+例如：B类中有对象A作为成员，A为对象成员
+
+```c++
+class A {
+public:
+    A() {
+        cout << "A构造" << endl;
+    }
+    ~A(){
+        cout << "A析构" << endl;
+    }
+};
+
+class B {
+public:
+    A a;
+
+    B(){
+        cout << "B构造" << endl;
+    }
+    ~B(){
+        cout << "B析构" << endl;
+    }
+};
+
+
+int main() {
+    B b;
+    /* A构造
+     * B构造
+     * B析构
+     * A析构
+     * */
+
+    return 0;
+}
+```
+
+> 即先调用对象成员的构造函数；再调用本类构造
+
+
+
+## 静态成员
+
+静态成员就是在成员变量和成员函数前加上**关键字static**，称为静态成员
+
+静态成员分为：
+
+- 静态成员变量
+
+  *  所有对象共享同一份数据
+  *  在编译阶段分配内存
+  *  类内声明，类外初始化
+
+  ```c++
+  class Person {
+  public:
+      static int a;
+  };
+  //类外初始化
+  int Person::a = 10;
+  ```
+
+- 静态成员函数
+
+  *  所有对象共享同一个函数
+  *  静态成员函数只能访问静态成员变量
+
+  ```c++
+  class Person {
+  public:
+      static int a;
+      int b;
+  
+      static void func() {
+          a = 20;
+          b = 20; //ERROR
+      }
+  };
+  int Person::a = 10;
+  
+  int main() {
+  
+      Person p;
+      //静态成员函数的调用：
+      p.func();
+      Person::func();
+  
+      return 0;
+  }
+  ```
+
+  
+
+## C++对象模型与this指针
+
+[黑马程序员匠心之作|C++教程从0到1入门编程,学习编程不再难_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1et411b73Z?p=114&spm_id_from=pageDriver)
