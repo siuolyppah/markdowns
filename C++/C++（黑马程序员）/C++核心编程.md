@@ -1139,3 +1139,119 @@ int main() {
 ## C++对象模型与this指针
 
 [黑马程序员匠心之作|C++教程从0到1入门编程,学习编程不再难_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1et411b73Z?p=114&spm_id_from=pageDriver)
+
+### 成员变量和成员函数分开存储
+
+- ***只有非静态的成员变量，才分配在类的对象上***
+- 静态成员变量在全局区；成员函数都分配在代码区
+
+- 特别的，一个没有成员的对象，占用1个字节。（用于区分两个空对象）
+
+
+
+### this指针
+
+- ***this指针，指向调用此成员函数的对象***。
+
+- this指针，隐含在每一个非静态成员函数内
+
+
+
+this指针的用途：
+
+- 当形参与成员变量同名时，可用this指针进行区分
+- 在类的非静态成员函数中，返回调用者本身（即return *this）。
+
+
+
+***this指针的本质：指针常量，即指向不可变***
+
+
+
+### 空指针访问成员函数
+
+在C++中，***空指针，可以调用成员函数***
+
+```c++
+class Person{
+public:
+    int a;
+
+    void doThing(){
+        cout<<"nothing done!"<<endl;
+    }
+
+    void coutA(){
+        cout<< this->a <<endl;
+    }
+};
+
+int main() {
+
+    Person* ptr = nullptr;
+    ptr->doThing();      //ok
+    ptr->coutA();       //error
+
+    return 0;
+}
+```
+
+> 要注意保证代码健壮性
+
+
+
+### const修饰成员函数
+
+- 常函数：
+
+  - 即：成员函数的()后，跟有关键字const
+
+  - ***常函数内，不能修改成员属性***
+
+    > 因为此时，this指针变为const Person* const this
+
+  - ***但声明为mutable的成员属性，在常函数中仍可修改***
+
+- 常对象：
+
+  - 即：声明为const的对象
+  - ***常对象仅能调用常函数，仅能修改mutable属性***
+
+
+
+```c++
+class Person {
+public:
+    int a;
+    mutable int b;
+
+    void changePerson(){
+        this->a=10;
+    }
+
+    void showPerson() const {
+        //this->a =10;    //ERROR
+        this->b = 20;
+    }
+};
+
+int main() {
+    Person p1;
+    p1.showPerson();
+    p1.changePerson();
+
+    Person const p2{10,20};
+    p2.showPerson();
+    //p2.changePerson();    //ERROR
+    //p2.a=100;             //ERROR
+    p2.b=100;
+
+    return 0;
+}
+```
+
+
+
+## 友元
+
+[黑马程序员匠心之作|C++教程从0到1入门编程,学习编程不再难_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1et411b73Z?p=118&spm_id_from=pageDriver)
