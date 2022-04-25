@@ -432,7 +432,7 @@ https://www.bilibili.com/video/BV1Zy4y1K7SH?p=10&spm_id_from=pageDriver
 > console.log(Object.keys(person));
 > 
 > for(let key in person){
->   console.log(person[key]);
+> console.log(person[key]);
 > }
 > </script>
 > ```
@@ -2415,7 +2415,7 @@ fbding指令：使得input元素获取焦点
 
     data{},methos{},watch{},computed{}中的函数，均指向Vue实例对象
 
--   一个重要的内置关系：
+- 一个重要的内置关系：
 
   ```javascript
   VueComponent.prototype.__proto__ === Vue.prototype
@@ -2427,7 +2427,7 @@ fbding指令：使得input元素获取焦点
 
 
 
-# 单文件组件
+# 使用Vue脚手架（单文件组件）
 
 > 即一个文件(a.vue)中，只包含单个组件
 
@@ -2476,7 +2476,7 @@ fbding指令：使得input元素获取焦点
 
 
 
-## 创建Vue脚手架
+## 安装Vue脚手架
 
 [Home | Vue CLI (vuejs.org)](https://cli.vuejs.org/zh/)
 
@@ -2509,25 +2509,26 @@ fbding指令：使得input元素获取焦点
 
 
 
-> Vue脚手架隐藏了所有webpack相关的配置，若想查看具体的webpack配置，执行：
->
-> ```sh
-> vue inspect > output.js
-> ```
+## 模板项目的结构
 
-
-
-项目结构：
-
-- public：
-  - index.html
-  - favicon.ico
-- src：
-  - components
-  - App.vue
-  - main.js：***整个项目的入口文件***
-
-
+```
+├── node_modules
+├── public
+│ ├── favicon.ico: 页签图标
+│ └── index.html: 主页面
+├── src
+│ ├── assets: 存放静态资源
+│ │ └── logo.png
+│ │── component: 存放组件
+│ │ └── HelloWorld.vue
+│ │── App.vue: 汇总所有组件
+│ │── main.js: 入口文件
+├── .gitignore: git 版本管制忽略的配置
+├── babel.config.js: babel 的配置文件
+├── package.json: 应用包配置文件
+├── README.md: 应用描述文件
+├── package-lock.json：包版本控制文件
+```
 
 
 
@@ -2641,4 +2642,281 @@ fbding指令：使得input元素获取焦点
 
 ## render函数
 
-[尚硅谷Vue2.0+Vue3.0全套教程丨vuejs从入门到精通_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1Zy4y1K7SH?p=63&spm_id_from=pageDriver)
+- vue.js：完整版的Vue，包含Vue核心功能+模板解析器。
+
+- vue.runtime.xxx.js：运行时Vue，***仅包含核心功能***。
+
+  这意味着，配置在JS代码中的template选项将无效。
+
+  > 当然，.vue文件中的template标签仍能解析。因为存在vue-template-compiler
+
+
+
+- 默认的main.js如下：
+
+  ```js
+  import Vue from 'vue'   //即./vue/dist/vue.runtime.esm.js
+  import App from './App.vue' 
+  
+  Vue.config.productionTip = false
+  
+  new Vue({
+      render: h => h(App),
+  }).$mount('#app')
+  ```
+
+  在vue.runtime.esm.js中，***没有模板解析器***。
+
+- 其等同于：
+
+  ```js
+  import Vue from 'vue/dist/vue'
+  import App from './App.vue' 
+  
+  Vue.config.productionTip = false
+  
+  new Vue({
+      template:"<App></App>",
+      components:{App},
+  }).$mount('#app');
+  ```
+
+  
+
+render函数的等价写法：
+
+```js
+//createElement为一函数
+render(createElement){
+    return createElement("h1","你好");
+}
+
+render:(createElement)=>{
+    return createElement("h1",你好);
+}
+
+render: createElement => createElement("h1",你好)
+```
+
+
+
+## 修改脚手架默认配置
+
+> Vue脚手架隐藏了所有webpack相关的配置，若想查看具体的webpack配置，执行：
+>
+> ```sh
+> vue inspect > output.js
+> ```
+>
+> 注意，output.js仅是当前vue项目配置的快照
+
+
+
+不应修改的配置项：
+
+- public文件夹：
+  - favicon.ico
+  - index.html
+- src文件夹
+  - main.js不可修改
+
+
+
+修改配置项的方式：[配置参考 | Vue CLI (vuejs.org)](https://cli.vuejs.org/zh/config/)
+
+项目根目录下，编写vue.config.js文件
+
+- 关闭语法检查：
+
+  ```js
+  // vue.config.js
+  module.exports = {
+      lintOnSave : false
+  }
+  ```
+
+  
+
+## ref属性
+
+- ref属性用于给**元素或子组件**，注册引用信息（id属性的替代）
+- 使用方式：
+  - 打标识：`<h1 ref="xxx"></h1>`或`<School ref="xxx"></School>`
+  - 获取：`this.$refs.xxx`，但要注意：
+    - 若为原生html元素，将获得dom对象
+    - 若为vue组件，则将获得该***组件的组件实例化对象***
+
+```vue
+// App.vue
+<template>
+    <div>
+        <!-- 类似于html的原生id属性 -->
+        <h1 v-text="msg" ref="title"></h1>
+        <button @click="showDom">click me</button>
+        <School ref="sch"/>
+    </div>
+</template>
+
+<script>
+import School from "./components/School.vue"
+export default {
+    name:"app",
+    components:{
+        School
+    },
+    data(){
+        return {
+            msg:"欢迎"
+        }
+    },
+    methods:{
+        showDom(){
+            //this为App组件的实例对象
+            console.log(this.$refs.title); //dom对象
+            console.log(this.$refs.sch);   //School组件的实例对象
+        }
+    }
+}
+</script>
+```
+
+ 
+
+
+
+## props选项
+
+props选项的功能：***让组件接收外部（使用者）传递的数据***
+
+- 传递数据：
+
+  ```vue
+  <Demo age="xxx"></Demo>
+  ```
+
+  > 注意：
+  >
+  > - 形如`age="xxx"`的方式，引号的内容将直接被视作字符串
+  > - 形如`:age="xxx"`的方式，引号的内容将被***视作JS表达式***，表达式的运算结果将被传递
+
+- 接收数据：
+
+  - 简单接收：
+
+    ```js
+    props:["age"]
+    ```
+
+  - 只限制类型
+
+    ```js
+    props:{
+    	age:Number,
+    }
+    ```
+
+  - 限制类型、限制必要性、指定默认值：
+
+    ```js
+    props:{
+    	age:{
+    		type:Number,
+    		required:false,
+    		default:18
+    	}
+    }
+    ```
+
+> 注意，props属性和data属性，都将绑定到组件实例化对象上。
+>
+> - 但props属性优先级较高，且先加载。
+>
+> - props属性是只读的，在修改时会发出警告。
+>
+>   > 若业务上确实需要修改props属性，可将prop属性复制到data属性上，并改为对data属性进行操作
+
+
+
+- Student.vue如下：
+
+  ```vue
+  <template>
+    <div>
+        <h1>{{msg}}</h1>
+        <h2>学生名称：{{name}} </h2>
+        <h2>学生年龄：{{myAge + 1}}</h2>
+  
+      <button @click="updateAge">click me to update age</button>
+    </div>
+  </template>
+  
+  <script>
+  export default {
+      name:"Student",
+      data(){
+          return {
+              msg:"一个尚硅谷的学生：",
+              myAge:this.age,
+          }
+      },
+      methods:{
+          updateAge(){
+              this.myAge++;
+          }
+      },
+      //简单声明接受
+      // props:['name','age']
+      
+      //接收并对限制数据类型
+      // props:{
+      //     name:String,
+      //     age:Number,
+      // }
+      
+      props:{
+          name:{
+              type:String,
+              required:true
+          },
+          age:{
+              type:Number,
+              default:20
+          }
+      }
+  }
+  </script>
+  ```
+
+- App.vue如下：
+
+  ```vue
+  // vue.js
+  <template>
+      <div>
+          <!-- 引号内容全部作为字符串 -->
+          <Student name="小王" :age="17"/>
+  
+          <!-- 属性前存在冒号，则引号内视作JS表达式 -->
+          <Student name="小明" :age="18"/>
+  
+          <!-- 使用默认值 -->
+          <Student name="小张"/>
+      </div>
+  </template>
+  
+  <script>
+  import Student from "./components/Student.vue"
+  export default {
+      name:"app",
+      components:{
+          Student
+      },
+  }
+  </script>
+  ```
+
+  
+
+## mixin混入
+
+[尚硅谷Vue2.0+Vue3.0全套教程丨vuejs从入门到精通_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1Zy4y1K7SH?p=67&spm_id_from=pageDriver)
