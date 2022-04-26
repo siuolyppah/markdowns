@@ -949,7 +949,7 @@ channel 必须关闭，不过调用了 FileInputStream、FileOutputStream 或者
 
 
 
-## 两个 Channel 传输数据
+### 两个 Channel 传输数据
 
 FileChannel的transferTo方法：
 
@@ -1047,6 +1047,8 @@ System.out.println(path.normalize()); 		//d:\data\projects\b
 
 ## Files工具类
 
+### 基础使用
+
 检查文件（或文件夹）是否存在
 
 ```java
@@ -1137,13 +1139,17 @@ Files.delete(target);
 
 
 
-遍历目录文件
+### walkFileTree()方法
+
+遍历目录文件：Files类的walkFileTree()
 
 ```java
 public static void main(String[] args) throws IOException {
     Path path = Paths.get("C:\\Program Files\\Java\\jdk1.8.0_91");
     AtomicInteger dirCount = new AtomicInteger();
     AtomicInteger fileCount = new AtomicInteger();
+    
+    //该匿名内部类，决定了对遍历到的文件做何种操作
     Files.walkFileTree(path, new SimpleFileVisitor<Path>(){
         @Override
         public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) 
@@ -1165,6 +1171,8 @@ public static void main(String[] args) throws IOException {
     System.out.println(fileCount); // 1479
 }
 ```
+
+> 使用了 ***访问者设计模式***
 
 
 
@@ -1243,3 +1251,10 @@ long end = System.currentTimeMillis();
 System.out.println(end - start);
 ```
 
+
+
+
+
+# 网络编程
+
+[黑马程序员Netty全套教程，全网最全Netty深入浅出教程，Java网络编程的王者_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1py4y1E7oA?p=22&spm_id_from=pageDriver)
