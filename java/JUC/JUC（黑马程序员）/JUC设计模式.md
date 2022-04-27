@@ -114,3 +114,429 @@ class TwoPhaseTermination {
 - 当monitor线程处于sleep时被打断，打断标记将被清除，并抛出InterruptedException异常，从而进行catch块，将再次调用interrupt方法，设置打断标记为true
 - 当检测到当前线程的打断标记为真时，进行后续处理操作，安全结束线程
 
+
+
+
+
+# 同步模式之保护性暂停
+
+## 定义
+
+即 Guarded Suspension，用在一个线程等待另一个线程的执行结果
+
+要点：
+
+- 有**<u>*一个结果*</u>**需要从一个线程传递到另一个线程，让他们关联同一个 GuardedObject 
+
+  > 但如果有结果不断从一个线程到另一个线程，则应采用消息队列（见生产者/消费者）
+
+- JDK 中，join 的实现、Future 的实现采用的就是此模式
+
+> 因为要等待另一方的结果，因此归类到同步模式
+
+
+
+![image-20220427200712055](JUC%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F.assets/image-20220427200712055.png)
+
+
+
+## 实现
+
+```java
+@Slf4j(topic = "c.Test20")
+public class Test20 {
+
+    public static void main(String[] args) {
+        // 模拟 线程1 等待 线程2
+
+        GuardedObject guardedObject = new GuardedObject();
+
+        new Thread(() -> {
+            List<String> list = (List<String>) guardedObject.get();
+            log.debug("等待结束。结果长度：{}",list.size());
+        }, "thread1").start();
+
+        new Thread(()->{
+            try {
+                log.debug("开始下载");
+                List<String> download = Downloader.download();
+
+                guardedObject.complete(download);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        },"thread2").start();
+    }
+}
+
+
+class GuardedObject {
+
+    // 即运行结果
+    private Object response;
+
+    // 获取结果
+    public Object get() {
+        synchronized (this) {
+            while (response == null) {
+                try {
+                    this.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            return response;
+        }
+    }
+    
+    // 获取结果
+    // timeout表示最长等待时间
+    public Object get(long timeout) {
+        synchronized (this) {
+            long begin = System.currentTimeMillis();
+            long passedTime = 0;
+
+            while (response == null) {
+                if (passedTime >= timeout)
+                    break;
+
+                // 需考虑虚假唤醒问题
+                try {
+                    this.wait(timeout - passedTime);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                passedTime = System.currentTimeMillis() - begin;
+            }
+
+            return response;
+        }
+    }
+    
+    // 产生结果
+    public void complete(Object response) {
+        synchronized (this) {
+            this.response = response;
+            this.notifyAll();
+        }
+    }
+}
+```
+
+
+
+## 拓展（多任务版 GuardedObject）
+
+图中 Futures 就好比居民楼一层的信箱（每个信箱有房间编号），左侧的 t0，t2，t4 就好比等待邮件的居民，右侧的 t1，t3，t5 就好比邮递员
+
+如果需要在多个类之间使用 GuardedObject 对象，作为参数传递不是很方便，因此设计一个用来解耦的中间类， 这样不仅能够***解耦【结果等待者】和【结果生产者】***，还能够同时支持多个任务的管理
+
+![image-20220427205156863](JUC%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F.assets/image-20220427205156863.png)
+
+> 区别于生产者消费者模式的特点：
+>
+> ***一个生产者和一个消费者之间***，是相互***一一对应的***。
+
+
+
+
+
+- 新增 id 用来标识 Guarded Object
+
+  ```java
+  class GuardedObject {
+  
+      // 用于唯一表示GuardedObject
+      private int id;
+  
+      public int getId() {
+          return id;
+      }
+  
+      public GuardedObject(int id) {
+          this.id = id;
+      }
+  
+      private Object response;
+  
+      public Object get(long timeout) {
+          synchronized (this) {
+              long begin = System.currentTimeMillis();
+              long passedTime = 0;
+  
+              while (response == null) {
+                  if (passedTime >= timeout)
+                      break;
+  
+                  // 需考虑虚假唤醒问题
+                  try {
+                      this.wait(timeout - passedTime);
+                  } catch (InterruptedException e) {
+                      e.printStackTrace();
+                  }
+                  passedTime = System.currentTimeMillis() - begin;
+              }
+  
+              return response;
+          }
+      }
+  
+      public void complete(Object response) {
+          synchronized (this) {
+              this.response = response;
+              this.notifyAll();
+          }
+      }
+  }
+  ```
+
+- 中间解耦类
+
+  ```java
+  class MailBoxes {
+      private static Map<Integer, GuardedObject> boxes = new Hashtable<>();
+      private static int id = 1;
+  
+      public static synchronized int generateId() {
+          return id++;
+      }
+  
+      public static GuardedObject createGuardObject() {
+          GuardedObject go = new GuardedObject(generateId());
+          boxes.put(go.getId(), go);
+          return go;
+      }
+  
+      public static GuardedObject getGuardObject(int id) {
+          return boxes.remove(id);
+      }
+  
+      public static Set<Integer> getIds() {
+          return boxes.keySet();
+      }
+  }
+  ```
+
+- 业务相关类
+
+  ```java
+  // 居民类
+  @Slf4j(topic = "c.People")
+  class People extends Thread {
+  
+      @Override
+      public void run() {
+          GuardedObject guardObject = MailBoxes.createGuardObject();
+          Object mail = guardObject.get(5000);
+          log.debug("id:{},receivedMail：{}", guardObject.getId(), mail);
+      }
+  }
+  ```
+
+  ```java
+  // 邮递员类
+  @Slf4j(topic = "c.Postman")
+  class Postman extends Thread {
+      private int mailBoxId;
+      private String mail;
+  
+      public Postman(int mailBoxId, String mail) {
+          this.mailBoxId = mailBoxId;
+          this.mail = mail;
+      }
+  
+      @Override
+      public void run() {
+          GuardedObject guardObject = MailBoxes.getGuardObject(this.mailBoxId);
+          guardObject.complete(this.mail);
+          log.debug("id:{},deliverMail:{}", guardObject.getId(), mail);
+      }
+  }
+  ```
+
+- 测试
+
+  ```java
+  @Slf4j(topic = "c.Test20")
+  public class Test20 {
+  
+      public static void main(String[] args) throws InterruptedException {
+          for (int i = 0; i < 3; i++) {
+              new People().start();
+          }
+          Thread.sleep(1000);
+  
+          for (Integer id : MailBoxes.getIds()) {
+              // 注意：一个生产者和一个消费者相互对应
+              new Postman(id, "content" + id).start();
+          }
+      }
+  }
+  ```
+
+  ```
+  21:14:42 [Thread-4] c.Postman - id:2,deliverMail:content2
+  21:14:42 [Thread-2] c.People - id:2,receivedMail：content2
+  21:14:42 [Thread-3] c.Postman - id:3,deliverMail:content3
+  21:14:42 [Thread-1] c.People - id:3,receivedMail：content3
+  21:14:42 [Thread-5] c.Postman - id:1,deliverMail:content1
+  21:14:42 [Thread-0] c.People - id:1,receivedMail：content1
+  ```
+
+
+
+
+# 异步模式之生产者/消费者
+
+## 定义
+
+> #### 💡 为什么是异步模式？
+>
+> 因为生产者的生产结果，并不一定立即被消费
+
+> 区别与多任务版的GuradedObjcet：
+>
+> 生产者消费者模式，***不需要生成结果的线程和消费结果的线程，一一对应***。
+
+- ***消费队列可以用来平衡生产和消费的线程资源***
+- ***生产者仅负责产生结果数据***，不关心数据该如何处理，而***消费者专心处理结果数据***
+
+- 消息队列是有容量限制的，满时不会再加入数据，空时不会再消耗数据
+
+- JDK 中各种阻塞队列，采用的就是这种模式
+
+
+
+例如如下的情况：
+
+![image-20220427212225651](JUC%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F.assets/image-20220427212225651.png)
+
+
+
+## 实现
+
+- 消息载体类：
+
+  ```java
+  final class Message {
+      private int id;
+      private Object value;
+  
+      public Message(int id, Object value) {
+          this.id = id;
+          this.value = value;
+      }
+  
+      public int getId() {
+          return id;
+      }
+  
+      public Object getValue() {
+          return value;
+      }
+  
+      @Override
+      public String toString() {
+          return "Message{" +
+                  "id=" + id +
+                  ", value=" + value +
+                  '}';
+      }
+  }
+  ```
+
+- 消息队列（仅能在Java**<u>线程间</u>**通信）：
+
+  ```java
+  // Java线程间 通信的消息队列
+  @Slf4j(topic = "c.MessageQueue")
+  class MessageQueue {
+  
+      private final LinkedList<Message> list = new LinkedList<>();
+      private final int capacity;
+  
+      public MessageQueue(int capacity) {
+          this.capacity = capacity;
+      }
+  
+      public Message take() {
+          synchronized (list) {
+              while (list.isEmpty()) {
+                  try {
+                      log.debug("队列为空,消费者线程进入等待");
+                      list.wait();
+                  } catch (InterruptedException e) {
+                      e.printStackTrace();
+                  }
+              }
+  
+              Message message = list.removeFirst();
+              log.debug("消费：{}", message);
+              list.notifyAll();
+              return message;
+          }
+      }
+  
+      public void put(Message message) {
+          synchronized (list) {
+              while (list.size() == this.capacity) {
+                  try {
+                      log.debug("队列为满，生产者线程进入等待");
+                      list.wait();
+                  } catch (InterruptedException e) {
+                      e.printStackTrace();
+                  }
+              }
+  
+              list.addLast(message);
+              log.debug("生产：{}", message);
+              list.notifyAll();
+          }
+      }
+  }
+  ```
+
+- 测试类：
+
+  ```java
+  @Slf4j(topic = "c.Test21")
+  public class Test21 {
+  
+      public static void main(String[] args) throws InterruptedException {
+          MessageQueue queue = new MessageQueue(2);
+  
+          // 生产者线程
+          for (int i = 0; i < 3; i++) {
+              int id = i;
+              new Thread(() -> {
+                  queue.put(new Message(id, "message-" + id));
+              }, "producer-" + i).start();
+          }
+  
+          Thread.sleep(1000);
+  
+          // 消费者线程
+          new Thread(() -> {
+              while (true) {
+                  Message message = queue.take();
+              }
+          }, "consumer").start();
+      }
+  
+  }
+  ```
+
+  ```
+  22:03:28 [producer-0] c.MessageQueue - 生产：Message{id=0, value=message-0}
+  22:03:28 [producer-2] c.MessageQueue - 生产：Message{id=2, value=message-2}
+  22:03:28 [producer-1] c.MessageQueue - 队列为满，生产者线程进入等待
+  22:03:29 [consumer] c.MessageQueue - 消费：Message{id=0, value=message-0}
+  22:03:29 [consumer] c.MessageQueue - 消费：Message{id=2, value=message-2}
+  22:03:29 [consumer] c.MessageQueue - 队列为空,消费者线程进入等待
+  22:03:29 [producer-1] c.MessageQueue - 生产：Message{id=1, value=message-1}
+  22:03:29 [consumer] c.MessageQueue - 消费：Message{id=1, value=message-1}
+  22:03:29 [consumer] c.MessageQueue - 队列为空,消费者线程进入等待
+  ```
+
+  
