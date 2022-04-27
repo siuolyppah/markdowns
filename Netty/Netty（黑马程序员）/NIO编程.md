@@ -1257,4 +1257,1164 @@ System.out.println(end - start);
 
 # 网络编程
 
-[黑马程序员Netty全套教程，全网最全Netty深入浅出教程，Java网络编程的王者_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1py4y1E7oA?p=22&spm_id_from=pageDriver)
+## 阻塞 vs 非阻塞
+
+### 阻塞
+
+服务器端：
+
+```java
+@Slf4j
+public class Server {
+
+    public static void main(String[] args) throws IOException {
+        // 使用 nio 理解阻塞模式 <单线程>
+
+        // 1.创建服务器
+        ServerSocketChannel ssc = ServerSocketChannel.open();
+
+        // 2.绑定监听端口
+        ssc.bind(new InetSocketAddress(8080));
+
+        List<SocketChannel> channels = new ArrayList<>();
+        ByteBuffer buffer = ByteBuffer.allocate(16);
+
+        while (true) {
+            // 3.accept建立与客户端的连接，SocketChannel用于和客户端通信
+
+            log.debug("connecting");
+            // accept为阻塞方法，线程停止运行。连接建立后，线程恢复运行
+            SocketChannel sc = ssc.accept();
+            log.debug("connected,{}", sc);
+            channels.add(sc);
+
+            // 4.接收客户端发送的数据
+            for (SocketChannel channel : channels) {
+                log.debug("before read,{}", channel);
+                // read方法也为阻塞方法。接收到客户端的数据后恢复运行
+                channel.read(buffer);
+                buffer.flip();
+                debugRead(buffer);
+                buffer.clear();
+                log.debug("after read,{}", channel);
+            }
+        }
+    }
+```
+
+
+
+客户端：
+```java
+public class Client {
+
+    public static void main(String[] args) throws IOException {
+        SocketChannel sc = SocketChannel.open();
+        sc.connect(new InetSocketAddress("localhost",8080));
+
+        // 在此打断点,执行sc.write(Charset.defaultCharset().encode("hello"));
+        System.out.println("waiting");
+    }
+}
+```
+
+
+
+* ***阻塞模式下，相关方法都会导致线程暂停***
+
+  * ServerSocketChannel.accept 会在没有连接建立时让线程暂停
+  * SocketChannel.read 会在没有数据可读时让线程暂停
+  * ***阻塞的表现其实就是线程暂停了，暂停期间不会占用 cpu，但线程相当于闲置***
+
+  > 简而言之，阻塞模式下，会阻塞等待事件发生。
+
+* 单线程下，阻塞方法之间相互影响，几乎不能正常工作，需要多线程支持
+* 但多线程下，有新的问题，体现在以下方面
+  * 32 位 jvm 一个线程 320k，64 位 jvm 一个线程 1024k，如果连接数过多，必然导致 OOM，并且线程太多，反而会因为频繁上下文切换导致性能降低
+  * 可以采用线程池技术来减少线程数和线程上下文切换，但治标不治本，如果有很多连接建立，但长时间 inactive，会阻塞线程池中所有线程，因此不适合长连接，只适合短连接
+
+
+
+### 非阻塞模式
+
+服务器端：
+
+```java
+@Slf4j
+public class Server {
+
+    public static void main(String[] args) throws IOException {
+        //单线程，非阻塞模式
+
+        ServerSocketChannel ssc = ServerSocketChannel.open();
+        /*
+         * 默认true，即阻塞模式
+         * 影响的是accept()方法
+         * */
+        ssc.configureBlocking(false);
+        ssc.bind(new InetSocketAddress(8080));
+
+        List<SocketChannel> channels = new ArrayList<>();
+        ByteBuffer buffer = ByteBuffer.allocate(16);
+
+        while (true) {
+
+            /*
+             * accept变为非阻塞模式
+             * 如果没有连接建立，则accept()返回null，继续向下执行，而非阻塞线程
+             * */
+            SocketChannel sc = ssc.accept();
+            if (sc != null) {
+                log.debug("connected,{}", sc);
+
+                /*
+                 * 将SocketChannel设置为非阻塞模式，影响的是read方法
+                 * */
+                sc.configureBlocking(false);
+                channels.add(sc);
+            }
+
+            for (SocketChannel channel : channels) {
+
+                /*
+                 * read变为非阻塞模式
+                 * 若未获取数据，则返回0；而非阻塞线程
+                 * */
+                int read = channel.read(buffer);
+                if (read > 0) {
+                    buffer.flip();
+                    debugRead(buffer);
+                    buffer.clear();
+                    log.debug("after read,{}", channel);
+                }
+            }
+        }
+    }
+}
+```
+
+
+
+客户端如上。
+
+
+
+* 非阻塞模式下，相关方法都会不会让线程暂停
+  * 在 ServerSocketChannel.accept 在没有连接建立时，会返回 null，继续运行
+  * SocketChannel.read 在没有数据可读时，会返回 0，但线程不必阻塞，可以去执行其它 SocketChannel 的 read 或是去执行 ServerSocketChannel.accept 
+  * 写数据时，线程只是等待数据写入 Channel 即可，无需等 Channel 通过网络把数据发送出去
+* ***但非阻塞模式下，即使没有连接建立，和可读数据，线程仍然在不断运行，白白浪费了 cpu***
+* 数据复制过程中，线程实际还是阻塞的（AIO 改进的地方）
+
+
+
+### 多路复用(selector)
+
+**单线程可以配合 Selector 完成对多个 Channel 可读写事件的监控，这称之为<u>多路复用</u>**
+
+* 多路复用仅针对网络 IO、普通文件 IO 没法利用多路复用
+
+* 如果是未采用 Selector 的非阻塞模式，线程大部分时间都在做无用功
+
+* 而 Selector 能够保证：
+
+  * 有可连接事件时才去连接
+
+  * 有可读事件才去读取
+
+  * 有可写事件才去写入
+
+    >限于网络传输能力，Channel 未必时时可写，一旦 Channel 可写，会触发 Selector 的可写事件
+
+
+
+## Selector
+
+```mermaid
+graph TD
+subgraph selector 版
+thread --> selector
+selector --> c1(channel)
+selector --> c2(channel)
+selector --> c3(channel)
+end
+```
+
+Selector的好处在于：
+
+* ***一个线程配合 selector 就可以监控多个 channel 的事件，事件发生线程才去处理***。避免非阻塞模式下所做无用功
+* 让这个线程能够被充分利用
+* 节约了线程的数量
+* 减少了线程上下文切换
+
+
+
+### Selector的结构
+
+```java
+public abstract class Selector implements Closeable {
+    /**
+     * Returns this selector's key set.
+     *
+     * <p> The key set is not directly modifiable.  A key is removed only after
+     * it has been cancelled and its channel has been deregistered.  Any
+     * attempt to modify the key set will cause an {@link
+     * UnsupportedOperationException} to be thrown.
+     *
+     * <p> The set is <a href="#ksc">safe</a> for use by multiple concurrent
+     * threads.  </p>
+     *
+     * @return  This selector's key set
+     *
+     * @throws  ClosedSelectorException
+     *          If this selector is closed
+     */
+    public abstract Set<SelectionKey> keys();
+
+    /**
+     * Returns this selector's selected-key set.
+     *
+     * <p> Keys may be removed from, but not directly added to, the
+     * selected-key set.  Any attempt to add an object to the key set will
+     * cause an {@link UnsupportedOperationException} to be thrown.
+     *
+     * <p> The selected-key set is <a href="#sksc">not thread-safe</a>.  </p>
+     *
+     * @return  This selector's selected-key set
+     *
+     * @throws  ClosedSelectorException
+     *          If this selector is closed
+     */
+    public abstract Set<SelectionKey> selectedKeys();
+}
+```
+
+也就说是，一个Selector对象，其内部有两种重要的属性：
+
+- Set\<SelectionKey>类型的 keys 属性
+
+  当Channel对象调用register()方法时，例如：
+
+  ```java
+  Selector selector = Selector.open();
+  
+  ServerSocketChannel ssc = ServerSocketChannel.open();
+  ssc.configureBlocking(false);
+  ssc.bind(new InetSocketAddress(8080));
+  SelectionKey sscKey = ssc.register(selector, SelectionKey.OP_ACCEPT);
+  ```
+
+  1. 将创建一个SelectionKey对象(sscKey)
+  2. sscKey将与ssc绑定
+  3. sscKey将被放入keys集合
+
+- Set\<SelectionKey>类型的 selectedkeys 属性
+
+  当调用Selector对象的selectedKeys()方法时，例如：
+
+  ```java
+  selector.select();
+  
+  Set<SelectionKey> selectionKeys = selector.selectedKeys();
+  ```
+
+  selectionKeys集合中，将存放发生事件的所有SelectionKey对象。
+
+  可以对事件进行处理（处理完必须从selectedkeys中移除。因为此集合只会默认添加）；或者不再监听此事件（即cancel方法）。
+
+  ```java
+  Iterator<SelectionKey> iter = selectionKeys.iterator();
+  while (iter.hasNext()) {
+      SelectionKey key = iter.next();
+      if (key.isAcceptable()) {
+          ServerSocketChannel channel = (ServerSocketChannel) key.channel();
+          SocketChannel sc = channel.accept();
+          iter.remove();
+      }else{
+          key.cancel();
+      }
+  }
+  ```
+
+  >- 事件处理完，要从selectedkeys中移除
+  >
+  >- 但如果调用key.cancel()方法，此key对象将被从keys集合中移除。
+  >
+  >  这意味着不再监听此key绑定的channel发生的事件
+
+
+
+
+
+### 创建Selector
+
+```java
+Selector selector = Selector.open();
+```
+
+
+
+### 绑定Channel事件
+
+- 也称之为注册事件，selector只会关心绑定的事件。
+
+- ***Channel必须工作在非阻塞模式***
+
+  FileChannel 没有非阻塞模式，因此不能配合 selector 一起使用
+
+- 绑定的事件类型可以有：
+
+  - accept：在有连接请求时，在服务器端触发（ServerSockerChannel独有）
+  - connect：服务器端成功接受连接时，在客户端触发
+  - read：数据可读入时触发，有因为接收能力弱，数据暂不能读入的情况
+  - write：数据可写出时触发，有因为发送能力弱，数据暂不能写出的情况
+
+```java
+channel.configureBlocking(false);
+SelectionKey key = channel.register(selector, 绑定事件);
+```
+
+
+
+### 监听 Channel 事件
+
+可以通过下面三种方法来监听是否有事件发生：
+
+- 阻塞直到绑定事件发生
+
+  ```java
+  int count = selector.select();
+  ```
+
+- 阻塞直到绑定事件发生，或是超时（时间单位为 ms）
+
+  ```java
+  int count = selector.select(long timeout);
+  ```
+
+- 不会阻塞，也就是不管有没有事件，立刻返回，自己根据返回值检查是否有事件
+
+  ```java
+  int count = selector.selectNow();
+  ```
+
+方法的返回值代表有多少 channel 发生了事件
+
+
+
+> #### 💡 select 何时结束阻塞：
+>
+> * 事件发生时
+>   * 客户端发起连接请求，会触发 accept 事件
+>   * 客户端发送数据过来，客户端正常、异常关闭时，都会触发 read 事件，另外如果发送的数据大于 buffer 缓冲区，会触发多次读取事件
+>   * channel 可写，会触发 write 事件
+>   * 在 linux 下 nio bug 发生时
+> * 调用 selector.wakeup()
+> * 调用 selector.close()
+> * selector 所在线程 interrupt
+
+
+
+### 处理 accept 事件
+
+客户端：
+```java
+public class Client {
+    public static void main(String[] args) {
+        try (Socket socket = new Socket("localhost", 8080)) {
+            System.out.println(socket);
+            socket.getOutputStream().write("world".getBytes());
+            System.in.read();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+服务端：
+
+```java
+@Slf4j
+public class ChannelDemo6 {
+    public static void main(String[] args) {
+        try (ServerSocketChannel channel = ServerSocketChannel.open()) {
+            channel.bind(new InetSocketAddress(8080));
+            System.out.println(channel);
+            Selector selector = Selector.open();
+            channel.configureBlocking(false);
+            channel.register(selector, SelectionKey.OP_ACCEPT);
+
+            while (true) {
+                int count = selector.select();
+//                int count = selector.selectNow();
+                log.debug("select count: {}", count);
+//                if(count <= 0) {
+//                    continue;
+//                }
+
+                // 获取所有事件
+                Set<SelectionKey> keys = selector.selectedKeys();
+
+                // 遍历所有事件，逐一处理
+                Iterator<SelectionKey> iter = keys.iterator();
+                while (iter.hasNext()) {
+                    SelectionKey key = iter.next();
+                    // 判断事件类型
+                    if (key.isAcceptable()) {
+                        ServerSocketChannel c = (ServerSocketChannel) key.channel();
+                        // 必须处理
+                        SocketChannel sc = c.accept();
+                        log.debug("{}", sc);
+                    }
+                    // 处理完毕，必须将事件移除
+                    iter.remove();
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+
+
+
+
+>#### 💡 事件发生后能否不处理
+>
+>事件发生后，要么处理，要么取消（cancel），不能什么都不做，否则下次该事件仍会触发，这是因为 nio 底层使用的是水平触发
+
+
+
+### 处理 read 事件
+
+```java
+@Slf4j
+public class ChannelDemo6 {
+    public static void main(String[] args) {
+        try (ServerSocketChannel channel = ServerSocketChannel.open()) {
+            channel.bind(new InetSocketAddress(8080));
+            System.out.println(channel);
+            Selector selector = Selector.open();
+            channel.configureBlocking(false);
+            channel.register(selector, SelectionKey.OP_ACCEPT);
+
+            while (true) {
+                int count = selector.select();
+//                int count = selector.selectNow();
+                log.debug("select count: {}", count);
+//                if(count <= 0) {
+//                    continue;
+//                }
+
+                // 获取所有事件
+                Set<SelectionKey> keys = selector.selectedKeys();
+
+                // 遍历所有事件，逐一处理
+                Iterator<SelectionKey> iter = keys.iterator();
+                while (iter.hasNext()) {
+                    SelectionKey key = iter.next();
+                    // 判断事件类型
+                    if (key.isAcceptable()) {
+                        ServerSocketChannel c = (ServerSocketChannel) key.channel();
+                        // 必须处理
+                        SocketChannel sc = c.accept();
+                        sc.configureBlocking(false);
+                        sc.register(selector, SelectionKey.OP_READ);
+                        log.debug("连接已建立: {}", sc);
+                    } else if (key.isReadable()) {
+                        SocketChannel sc = (SocketChannel) key.channel();
+                        ByteBuffer buffer = ByteBuffer.allocate(128);
+                        int read = sc.read(buffer);
+                        if(read == -1) {
+                            key.cancel();
+                            sc.close();
+                        } else {
+                            buffer.flip();
+                            debug(buffer);
+                        }
+                    }
+                    // 处理完毕，必须将事件移除
+                    iter.remove();
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+
+
+>#### 💡 为何要 iter.remove()
+>
+>因为 select 在事件发生后，就会将相关的 key 放入 selectedKeys 集合，但不会在处理完后从 selectedKeys 集合中移除，需要我们自己编码删除。例如
+>
+>* 第一次触发了 ssckey 上的 accept 事件，没有移除 ssckey 
+>* 第二次触发了 sckey 上的 read 事件，但这时 selectedKeys 中还有上次的 ssckey ，在处理时因为没有真正的 serverSocket 连上了，就会导致空指针异常
+
+
+
+>#### 💡 cancel 的作用
+>
+>cancel 会取消注册在 selector 上的 channel，并从 keys 集合中删除 key 后续不会再监听事件
+
+
+
+#### 处理 accept和read 总结（未处理边界问题）
+
+客户端：
+
+```java
+public class Client {
+
+    public static void main(String[] args) throws IOException {
+        SocketChannel sc = SocketChannel.open();
+        sc.connect(new InetSocketAddress("localhost",8080));
+
+        // 在此打断点,执行sc.write(Charset.defaultCharset().encode("hello"));
+        System.out.println("waiting");
+        sc.close();
+    }
+}
+```
+
+
+
+服务端：
+```java
+@Slf4j
+public class Server {
+
+    public static void main(String[] args) throws IOException {
+        // 1.创建Selector，管理多个channel
+        Selector selector = Selector.open();
+
+        ServerSocketChannel ssc = ServerSocketChannel.open();
+        ssc.configureBlocking(false);
+        ssc.bind(new InetSocketAddress(8080));
+
+        // 2.建立 Selector 和 Channel 之间的联系，即注册
+        // 将来事件发生后，通过 SelectionKey 可以知道哪个 Channel 发生了什么事件
+        // 关注于 accept 事件
+        SelectionKey sscKey = ssc.register(selector, SelectionKey.OP_ACCEPT);
+
+        while (true) {
+            // 3.调用select方法。
+            // 当没有事件发生时，调用线程将阻塞等待，直至事件发生
+            selector.select();
+
+            // 4.处理（accept）事件，返回值包含了所有发生的事件
+            Set<SelectionKey> selectionKeys = selector.selectedKeys();
+            // 在迭代时删除元素，只能使用迭代器，而不能用增强For
+            Iterator<SelectionKey> iter = selectionKeys.iterator();
+            while (iter.hasNext()) {
+                SelectionKey key = iter.next();
+                log.debug("key:{}", key);
+
+                // 5.区分事件类型
+                if (key.isAcceptable()) {
+                    // 是哪个Channel触发的事件（其实就是上面的sscKey）。真正着手处理事件
+                    // 或者取消事件 key.cancel();
+                    ServerSocketChannel channel = (ServerSocketChannel) key.channel();
+                    SocketChannel sc = channel.accept();
+                    /*
+                     * 若不调用 iter.remove()方法，下面的代码将抛出空指针异常
+                     * 原因：selectionKeys中的元素，只会添加而不会自动删除。
+                     * 在上一轮循环中处理了accept事件，因此在此轮循环中accept()方法可能返回null
+                     * （因为事实上可能没有accept事件）
+                     * */
+                    sc.configureBlocking(false);
+                    log.debug("accept:{}", sc);
+                    sc.register(selector, SelectionKey.OP_READ);
+                } else if (key.isReadable()) {
+                    try {
+                        SocketChannel channel = (SocketChannel) key.channel();
+                        log.debug("read:{}", channel);
+                        ByteBuffer buffer = ByteBuffer.allocate(16);
+                        int read = channel.read(buffer);
+                        if(read == -1){
+                            //服务器正常断开时，将触发read事件。此次read方法将返回0
+                            key.cancel();
+                        }else {
+                            buffer.flip();
+                            debugRead(buffer);
+                        }
+                    } catch (IOException e) {
+                        //客户端强制断开将触发一个read事件。此次read方法将抛出IO异常
+
+                        e.printStackTrace();
+                        key.cancel();   //cancel将反注册
+                    }
+                }
+
+                // 处理完毕，必须移除
+                iter.remove();
+            }
+        }
+    }
+}
+```
+
+
+
+
+
+#### 经典的边界问题
+
+客户端：
+
+```java
+public class Client {
+    public static void main(String[] args) throws IOException {
+        Socket max = new Socket("localhost", 9000);
+        OutputStream out = max.getOutputStream();
+        out.write("hello".getBytes());
+        out.write("world".getBytes());
+        out.write("你好".getBytes());
+        max.close();
+    }
+}
+```
+
+服务端：
+
+```java
+public class Server {
+    public static void main(String[] args) throws IOException {
+        ServerSocket ss=new ServerSocket(9000);
+        while (true) {
+            Socket s = ss.accept();
+            InputStream in = s.getInputStream();
+            // 这里这么写，有没有问题
+            byte[] arr = new byte[4];
+            while(true) {
+                int read = in.read(arr);
+                // 这里这么写，有没有问题
+                if(read == -1) {
+                    break;
+                }
+                System.out.println(new String(arr, 0, read));
+            }
+        }
+    }
+}
+```
+
+将输出：
+
+```java
+hell
+owor
+ld�
+�好
+```
+
+
+
+#### 处理消息的边界
+
+![0023](NIO%E7%BC%96%E7%A8%8B.assets/0023-16510447547701.png)
+
+> 时刻2，对应着半包
+>
+> 时刻3，对应着黏包
+
+
+
+解决方案有以下几种：
+
+* 一种思路是固定消息长度，数据包大小一样，服务器按预定长度读取，缺点是浪费带宽（因为需要填充空字节）
+* 另一种思路是按分隔符拆分，缺点是处理效率低
+* TLV 格式，即 Type 类型、Length 长度、Value 数据，类型和长度已知的情况下，就可以方便获取消息大小，分配合适的 buffer，缺点是 buffer 需要提前分配，如果内容过大，则影响 server 吞吐量
+  * Http 1.1 是 TLV 格式
+  * Http 2.0 是 LTV 格式
+
+
+
+以第二种方案为例：
+
+```mermaid
+sequenceDiagram 
+participant c1 as 客户端1
+participant s as 服务器
+participant b1 as ByteBuffer1
+participant b2 as ByteBuffer2
+c1 ->> s: 发送 01234567890abcdef3333\r
+s ->> b1: 第一次 read 存入 01234567890abcdef
+s ->> b2: 扩容
+b1 ->> b2: 拷贝 01234567890abcdef
+s ->> b2: 第二次 read 存入 3333\r
+b2 ->> b2: 01234567890abcdef3333\r
+```
+
+服务器端：
+
+```java
+private static void split(ByteBuffer source) {
+    source.flip();
+    for (int i = 0; i < source.limit(); i++) {
+        // 找到一条完整消息
+        if (source.get(i) == '\n') {
+            int length = i + 1 - source.position();
+            // 把这条完整消息存入新的 ByteBuffer
+            ByteBuffer target = ByteBuffer.allocate(length);
+            // 从 source 读，向 target 写
+            for (int j = 0; j < length; j++) {
+                target.put(source.get());
+            }
+            debugAll(target);
+        }
+    }
+    source.compact(); // 0123456789abcdef  position 16 limit 16
+}
+
+public static void main(String[] args) throws IOException {
+    // 1. 创建 selector, 管理多个 channel
+    Selector selector = Selector.open();
+    ServerSocketChannel ssc = ServerSocketChannel.open();
+    ssc.configureBlocking(false);
+    // 2. 建立 selector 和 channel 的联系（注册）
+    // SelectionKey 就是将来事件发生后，通过它可以知道事件和哪个channel的事件
+    SelectionKey sscKey = ssc.register(selector, 0, null);
+    // key 只关注 accept 事件
+    sscKey.interestOps(SelectionKey.OP_ACCEPT);
+    log.debug("sscKey:{}", sscKey);
+    ssc.bind(new InetSocketAddress(8080));
+    while (true) {
+        // 3. select 方法, 没有事件发生，线程阻塞，有事件，线程才会恢复运行
+        // select 在事件未处理时，它不会阻塞, 事件发生后要么处理，要么取消，不能置之不理
+        selector.select();
+        // 4. 处理事件, selectedKeys 内部包含了所有发生的事件
+        Iterator<SelectionKey> iter = selector.selectedKeys().iterator(); // accept, read
+        while (iter.hasNext()) {
+            SelectionKey key = iter.next();
+            // 处理key 时，要从 selectedKeys 集合中删除，否则下次处理就会有问题
+            iter.remove();
+            log.debug("key: {}", key);
+            // 5. 区分事件类型
+            if (key.isAcceptable()) { // 如果是 accept
+                ServerSocketChannel channel = (ServerSocketChannel) key.channel();
+                SocketChannel sc = channel.accept();
+                sc.configureBlocking(false);
+                ByteBuffer buffer = ByteBuffer.allocate(16); // attachment
+                // 将一个 byteBuffer 作为附件关联到 selectionKey 上
+                SelectionKey scKey = sc.register(selector, 0, buffer);
+                scKey.interestOps(SelectionKey.OP_READ);
+                log.debug("{}", sc);
+                log.debug("scKey:{}", scKey);
+            } else if (key.isReadable()) { // 如果是 read
+                try {
+                    SocketChannel channel = (SocketChannel) key.channel(); // 拿到触发事件的channel
+                    // 获取 selectionKey 上关联的附件
+                    ByteBuffer buffer = (ByteBuffer) key.attachment();
+                    int read = channel.read(buffer); // 如果是正常断开，read 的方法的返回值是 -1
+                    if(read == -1) {
+                        key.cancel();
+                    } else {
+                        split(buffer);
+                        // 需要扩容
+                        if (buffer.position() == buffer.limit()) {
+                            ByteBuffer newBuffer = ByteBuffer.allocate(buffer.capacity() * 2);
+                            buffer.flip();
+                            newBuffer.put(buffer); // 0123456789abcdef3333\n
+                            key.attach(newBuffer);
+                        }
+                    }
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    key.cancel();  // 因为客户端断开了,因此需要将 key 取消（从 selector 的 keys 集合中真正删除 key）
+                }
+            }
+        }
+    }
+}
+```
+
+> register的第三个参数，用于传递一个ByteBuffer，即attachment
+
+
+
+客户端：
+
+```java
+SocketChannel sc = SocketChannel.open();
+sc.connect(new InetSocketAddress("localhost", 8080));
+SocketAddress address = sc.getLocalAddress();
+// sc.write(Charset.defaultCharset().encode("hello\nworld\n"));
+sc.write(Charset.defaultCharset().encode("0123\n456789abcdef"));
+sc.write(Charset.defaultCharset().encode("0123456789abcdef3333\n"));
+System.in.read();
+```
+
+
+
+#### ByteBuffer 大小分配
+
+* 每个 channel 都需要记录可能被切分的消息，因为 ByteBuffer 不能被多个 channel 共同使用，因此需要为每个 channel 维护一个独立的 ByteBuffer
+* ByteBuffer 不能太大，比如一个 ByteBuffer 1Mb 的话，要支持百万连接就要 1Tb 内存，因此需要设计大小可变的 ByteBuffer
+  * 一种思路是首先分配一个较小的 buffer，例如 4k，如果发现数据不够，再分配 8k 的 buffer，将 4k buffer 内容拷贝至 8k buffer，优点是消息连续容易处理，缺点是数据拷贝耗费性能，参考实现 [http://tutorials.jenkov.com/java-performance/resizable-array.html](http://tutorials.jenkov.com/java-performance/resizable-array.html)
+  * 另一种思路是用多个数组组成 buffer，一个数组不够，把多出来的内容写入新的数组，与前面的区别是消息存储不连续解析复杂，优点是避免了拷贝引起的性能损耗
+
+
+
+### 处理 write 事件
+
+#### 一次无法写完的例子(改进前)
+
+服务器端：
+
+```java
+@Slf4j
+public class WriteServer {
+
+    public static void main(String[] args) throws IOException {
+        ServerSocketChannel ssc = ServerSocketChannel.open();
+        ssc.configureBlocking(false);
+        ssc.bind(new InetSocketAddress(8080));
+
+        Selector selector = Selector.open();
+        ssc.register(selector, SelectionKey.OP_ACCEPT);
+
+        while (true){
+            selector.select();
+
+            Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
+            while (iter.hasNext()) {
+                SelectionKey key = iter.next();
+                iter.remove();
+
+                if(key.isAcceptable()){
+                    SocketChannel sc = ssc.accept();    //key.channel();
+                    sc.configureBlocking(false);
+
+                    // 1.向客户端发送大量请求
+                    StringBuilder sb = new StringBuilder();
+                    for (int i =0; i<30000000;i++)
+                        sb.append("a");
+                    ByteBuffer buffer = Charset.defaultCharset().encode(sb.toString());
+
+                    // 2.返回值代表服务端实际写入了多少字节
+                    while (buffer.hasRemaining()){
+                        int write = sc.write(buffer);
+                        log.debug("本次写入字节数：{}",write);
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+客户端：
+
+```java
+@Slf4j
+public class WriteClient {
+
+    public static void main(String[] args) throws IOException {
+        SocketChannel sc = SocketChannel.open();
+        sc.connect(new InetSocketAddress("localhost",8080));
+        
+        int count = 0;
+        // 3.客户端接收数据
+        while (true){
+            ByteBuffer buffer = ByteBuffer.allocate(1024*1024);
+            count += sc.read(buffer);
+            log.debug("目前累计读入的字节数：{}",count);
+        }
+    }
+}
+```
+
+
+
+存在的问题：
+
+即便发送缓冲区已满，服务端仍尝试进行write()
+
+
+
+
+
+#### 一次无法写完的例子(改进后)
+
+服务端：
+
+```java
+@Slf4j
+public class WriteServer {
+
+    public static void main(String[] args) throws IOException {
+        ServerSocketChannel ssc = ServerSocketChannel.open();
+        ssc.configureBlocking(false);
+        ssc.bind(new InetSocketAddress(8080));
+
+        Selector selector = Selector.open();
+        ssc.register(selector, SelectionKey.OP_ACCEPT);
+
+        while (true){
+            selector.select();
+
+            Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
+            while (iter.hasNext()) {
+                SelectionKey key = iter.next();
+                iter.remove();
+
+                if(key.isAcceptable()){
+                    SocketChannel sc = ssc.accept();    //key.channel();
+                    sc.configureBlocking(false);
+                    SelectionKey scKey = sc.register(selector, 0, null);
+
+                    // 1.向客户端发送大量请求
+                    StringBuilder sb = new StringBuilder();
+                    for (int i =0; i<5000000;i++)
+                        sb.append("a");
+                    ByteBuffer buffer = Charset.defaultCharset().encode(sb.toString());
+
+                    // 2.返回值代表服务端实际写入了多少字节
+                    int write = sc.write(buffer);
+                    log.debug("本次写入字节数：{}，剩余字节数：{}",write,buffer.limit() - buffer.position());
+
+                    // 3.判断是否有剩余内容
+                    if (buffer.hasRemaining()) {
+                        // 4.关注可写事件（触发于发送缓冲区可写时）,且不破坏原有事件
+                        scKey.interestOps(scKey.interestOps() + SelectionKey.OP_WRITE);
+
+                        // 5.将未写完的数据作为附件
+                        scKey.attach(buffer);
+                    }
+                }
+                else if(key.isWritable()){
+                    ByteBuffer buffer = (ByteBuffer) key.attachment();
+                    SocketChannel sc = (SocketChannel) key.channel();
+
+                    // 6.继续写
+                    int write = sc.write(buffer);
+                    log.debug("本次写入字节数：{}，剩余字节数：{}",write,buffer.limit() - buffer.position());
+
+                    // 7.善后
+                    if (!buffer.hasRemaining()){
+                        // 清理ByteBuffer
+                        key.attach(null);
+                        // 不再关注此channel的可写事件
+                        key.interestOps(key.interestOps() - SelectionKey.OP_WRITE);
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+客户端：
+
+```java
+@Slf4j
+public class WriteClient {
+
+    public static void main(String[] args) throws IOException {
+        SocketChannel sc = SocketChannel.open();
+        sc.connect(new InetSocketAddress("localhost",8080));
+
+        int count = 0;
+        // 3.客户端接收数据
+        while (true){
+            ByteBuffer buffer = ByteBuffer.allocate(1024*1024);
+            count += sc.read(buffer);
+            log.debug("目前累计读入的字节数：{}",count);
+        }
+    }
+}
+```
+
+
+
+* 非阻塞模式下，无法保证把 buffer 中所有数据都写入 channel，因此需要追踪 write 方法的返回值（代表实际写入字节数）
+* 用 selector 监听所有 channel 的可写事件，每个 channel 都需要一个 key 来跟踪 buffer，但这样又会导致占用内存过多，就有两阶段策略
+  * 当消息处理器第一次写入消息时，才将 channel 注册到 selector 上
+  * selector 检查 channel 上的可写事件，如果所有的数据写完了，就取消 channel 的注册
+  * 如果不取消，会每次可写均会触发 write 事件
+
+
+
+## 多线程优化的服务端
+
+前面的代码只有一个选择器，没有充分利用多核 cpu，如何改进呢？
+
+分两组选择器：
+
+* 单线程配一个选择器，专门处理 accept 事件
+* 创建 cpu 核心数的线程，每个线程配一个选择器，轮流处理 read 事件
+
+
+
+服务端：
+```java
+import lombok.extern.slf4j.Slf4j;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.*;
+import java.nio.charset.Charset;
+import java.util.Iterator;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
+
+@Slf4j
+public class MultiThreadServer {
+
+    public static void main(String[] args) throws IOException {
+        Thread.currentThread().setName("boss");
+
+        ServerSocketChannel ssc = ServerSocketChannel.open();
+        ssc.configureBlocking(false);
+
+        Selector boss = Selector.open();
+        ssc.register(boss, SelectionKey.OP_ACCEPT, null);
+        ssc.bind(new InetSocketAddress(8080));
+
+        int processors = Runtime.getRuntime().availableProcessors();
+        Worker[] workers = new Worker[processors];
+        for (int i = 0; i < workers.length; i++) {
+            workers[i] = new Worker("worker-" + i);
+        }
+
+        AtomicInteger index = new AtomicInteger();
+        while (true) {
+            boss.select();
+
+            Iterator<SelectionKey> iter = boss.selectedKeys().iterator();
+            while (iter.hasNext()) {
+                SelectionKey key = iter.next();
+                iter.remove();
+
+                if (key.isAcceptable()) {
+                    SocketChannel sc = ssc.accept();
+                    log.debug("connected:{}", sc.getRemoteAddress());
+                    sc.configureBlocking(false);
+
+                    log.debug("before register:{}", sc.getRemoteAddress());
+                    /*
+                     * 这里存在一个多线程问题。考虑如下的执行序列：
+                     * 1. Worker线程先执行selector.select()了，导致selector对象阻塞
+                     * 2. 主线程使用了worker.selector,导致主线程阻塞
+                     *    即sc.register(worker.selector, SelectionKey.OP_READ, null);
+                     * 解决方案：由worker线程处理register和select的逻辑
+                     * */
+
+                    // 轮询
+                    workers[index.getAndIncrement() % workers.length].start(sc);
+                    log.debug("after register:{}", sc.getRemoteAddress());
+                }
+            }
+        }
+    }
+
+    static class Worker implements Runnable {
+        private Thread thread;
+        private Selector selector;
+        private String name;
+        private volatile boolean started = false;
+        private ConcurrentLinkedQueue<Runnable> queue = new ConcurrentLinkedQueue<>();
+
+        public Worker(String name) {
+            this.name = name;
+        }
+
+        // 初始化 Thread 与 Selector
+        public void start(SocketChannel sc) throws IOException {
+            if (!started) {
+                // 即第一次调用start
+                thread = new Thread(this, this.name);
+                selector = Selector.open();
+                thread.start();
+
+                started = true;
+            }
+            queue.add(() -> {
+                try {
+                    sc.register(selector, SelectionKey.OP_READ, null);
+                } catch (ClosedChannelException e) {
+                    e.printStackTrace();
+                }
+            });
+
+            // 此行代码，将由Boss线程执行
+            selector.wakeup();
+        }
+
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    // 第一次将被Boss线程唤醒
+                    selector.select();
+
+                    // 使用队列解耦
+                    while (!queue.isEmpty()) {
+                        Runnable task = queue.poll();
+                        if (task != null)
+                            task.run();
+                    }
+
+                    Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
+                    while (iter.hasNext()) {
+                        SelectionKey key = iter.next();
+                        iter.remove();
+
+                        if (key.isReadable()) {
+                            ByteBuffer buffer = ByteBuffer.allocate(16);
+                            SocketChannel channel = (SocketChannel) key.channel();
+                            log.debug("before read:{}", channel.getRemoteAddress());
+
+                            // 黏包、半包问题忽略
+                            // 客户端正常、异常断开情况忽略
+                            channel.read(buffer);
+                            buffer.flip();
+                            log.debug("本次接收到数据：{}", Charset.defaultCharset().decode(buffer));
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+}
+```
+
+
+
+客户端：
+
+```java
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
+
+public class MultiThreadClientTest {
+
+    public static void main(String[] args) throws IOException {
+        SocketChannel sc = SocketChannel.open();
+        sc.connect(new InetSocketAddress("localhost",8080));
+
+        sc.write(Charset.defaultCharset().encode("1234567890abcdef"));
+
+        System.in.read();
+    }
+}
+```
+
+
+
+>#### 💡 关于如何拿到 cpu 个数
+>
+>* Runtime.getRuntime().availableProcessors() 如果工作在 docker 容器下，因为容器不是物理隔离的，会拿到物理 cpu 个数，而不是容器申请时的个数
+>* 这个问题直到 jdk 10 才修复，使用 jvm 参数 UseContainerSupport 配置， 默认开启
