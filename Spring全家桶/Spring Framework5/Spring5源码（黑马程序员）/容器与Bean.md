@@ -501,4 +501,311 @@ public static void main(String[] args) {
 
 ## ApplicationContext的实现类
 
-[黑马程序员Spring视频教程，全面深度讲解spring5底层原理_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1P44y1N7QG?p=11&spm_id_from=pageDriver)
+提前定义一些类：
+
+```java
+public class Bean1 {
+}
+```
+
+```java
+public class Bean2 {
+    private Bean1 bean1;
+
+    public Bean1 getBean1() {
+        return bean1;
+    }
+
+    public void setBean1(Bean1 bean1) {
+        this.bean1 = bean1;
+    }
+}
+```
+
+
+
+### ClassPathXmlApplicationContext
+
+根据从类路径下读取的xml配置文件，创建ApplicationContext容器
+
+
+
+- b01.xml：
+
+  ```xml
+  <?xml version="1.0" encoding="UTF-8"?>
+  <beans xmlns="http://www.springframework.org/schema/beans"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+  
+      <!-- 定义Bean Definition -->
+      <bean id="bean1" class="com.example.show.c2.Bean1"/>
+  
+      <bean id="bean2" class="com.example.show.c2.Bean2">
+          <property name="bean1" ref="bean1"/>
+      </bean>
+  </beans>
+  ```
+
+- 测试代码如下：
+
+  ```java
+  public class TestClassPathXmlApplicationContext {
+  
+      private static final Logger log = LoggerFactory.getLogger(TestClassPathXmlApplicationContext.class);
+  
+      public static void main(String[] args) {
+          ClassPathXmlApplicationContext context =
+                  new ClassPathXmlApplicationContext("b01.xml");
+  
+          for (String name : context.getBeanDefinitionNames()) {
+              log.debug("{}", name);
+          }
+  
+          Bean2 bean2 = context.getBean("bean2", Bean2.class);
+          log.debug("bean2:{}", bean2);
+          log.debug("bean2的属性bean1:{}", bean2.getBean1());
+      }
+  }
+  ```
+
+- 输出如下：
+
+  ```
+  23:28:07.002 [main] DEBUG com.example.show.c2.TestClassPathXmlApplicationContext - bean1
+  23:28:07.003 [main] DEBUG com.example.show.c2.TestClassPathXmlApplicationContext - bean2
+  23:28:07.003 [main] DEBUG com.example.show.c2.TestClassPathXmlApplicationContext - bean2:com.example.show.c2.Bean2@1cf6d1be
+  23:28:07.003 [main] DEBUG com.example.show.c2.TestClassPathXmlApplicationContext - bean2的属性bean1:com.example.show.c2.Bean1@663c9e7a
+  ```
+
+  
+
+### FileSystemXmlApplicationContext
+
+- xml文件同上
+
+- 测试类：
+
+  ```java
+  public class TestFileSystemXmlApplicationContext {
+  
+      private static final Logger log = LoggerFactory.getLogger(TestFileSystemXmlApplicationContext.class);
+  
+      public static void main(String[] args) {
+  
+          System.out.println(System.getProperty("user.dir"));     //D:\idea_workspace\springSourceAnalysis
+          FileSystemXmlApplicationContext context = new FileSystemXmlApplicationContext("./show/src/main/resources/b01.xml");
+  
+          for (String name : context.getBeanDefinitionNames()) {
+              log.debug("{}", name);
+          }
+  
+          Bean2 bean2 = context.getBean("bean2", Bean2.class);
+          log.debug("bean2:{}", bean2);
+          log.debug("bean2的属性bean1:{}", bean2.getBean1());
+  
+      }
+  }
+  ```
+
+- 输出：
+
+  ```
+  D:\idea_workspace\springSourceAnalysis
+  23:36:50.320 [main] DEBUG com.example.show.c2.TestFileSystemXmlApplicationContext - bean1
+  23:36:50.321 [main] DEBUG com.example.show.c2.TestFileSystemXmlApplicationContext - bean2
+  23:36:50.321 [main] DEBUG com.example.show.c2.TestFileSystemXmlApplicationContext - bean2:com.example.show.c2.Bean2@74e28667
+  23:36:50.321 [main] DEBUG com.example.show.c2.TestFileSystemXmlApplicationContext - bean2的属性bean1:com.example.show.c2.Bean1@1cf6d1be
+  ```
+
+  
+
+### 上面两个实现类的内部原理
+
+```java
+public class TestClassPathXmlApplicationContext {
+
+    private static final Logger log = LoggerFactory.getLogger(TestClassPathXmlApplicationContext.class);
+
+    public static void main(String[] args) {
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+        log.debug("before read Definition");
+        for (String name : beanFactory.getBeanDefinitionNames()) {
+            log.debug("bean name:{}", name);
+        }
+
+        // FileSystemXmlApplicationContext则传入Resource对象
+        XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(beanFactory);
+        reader.loadBeanDefinitions(new ClassPathResource("b01.xml"));
+        log.debug("after read Definition");
+        for (String name : beanFactory.getBeanDefinitionNames()) {
+            log.debug("bean name:{}", name);
+        }
+    }
+}
+```
+
+```
+23:49:00.679 [main] DEBUG com.example.show.c2.TestClassPathXmlApplicationContext - before read Definition
+23:49:00.842 [main] DEBUG org.springframework.beans.factory.xml.XmlBeanDefinitionReader - Loaded 2 bean definitions from class path resource [b01.xml]
+23:49:00.842 [main] DEBUG com.example.show.c2.TestClassPathXmlApplicationContext - after read Definition
+23:49:00.843 [main] DEBUG com.example.show.c2.TestClassPathXmlApplicationContext - bean name:bean1
+23:49:00.843 [main] DEBUG com.example.show.c2.TestClassPathXmlApplicationContext - bean name:bean2
+```
+
+
+
+### AnnotationConfigApplicationContext
+
+- 测试类：
+
+  ```java
+  public class TestAnnotationConfigApplicationContext {
+  
+      private static Logger log = LoggerFactory.getLogger(TestAnnotationConfigApplicationContext.class);
+  
+      public static void main(String[] args) {
+          AnnotationConfigApplicationContext context
+                  = new AnnotationConfigApplicationContext(Config.class);
+  
+          for (String name : context.getBeanDefinitionNames()) {
+              log.debug("bean name:{}", name);
+          }
+  
+          log.debug("bean2对象的bean1属性：{}", context.getBean("bean2", Bean2.class).getBean1());
+      }
+  
+      @Configuration
+      static class Config {
+          @Bean
+          public Bean1 bean1() {
+              return new Bean1();
+          }
+  
+          @Bean
+          public Bean2 bean2(Bean1 bean1) {
+              Bean2 bean2 = new Bean2();
+              bean2.setBean1(bean1);
+              return bean2;
+          }
+      }
+  }
+  ```
+
+- 输出：
+
+  ```
+  23:59:32.538 [main] DEBUG com.example.show.c2.TestAnnotationConfigApplicationContext - bean name:org.springframework.context.annotation.internalConfigurationAnnotationProcessor
+  23:59:32.539 [main] DEBUG com.example.show.c2.TestAnnotationConfigApplicationContext - bean name:org.springframework.context.annotation.internalAutowiredAnnotationProcessor
+  23:59:32.539 [main] DEBUG com.example.show.c2.TestAnnotationConfigApplicationContext - bean name:org.springframework.context.annotation.internalCommonAnnotationProcessor
+  23:59:32.539 [main] DEBUG com.example.show.c2.TestAnnotationConfigApplicationContext - bean name:org.springframework.context.event.internalEventListenerProcessor
+  23:59:32.539 [main] DEBUG com.example.show.c2.TestAnnotationConfigApplicationContext - bean name:org.springframework.context.event.internalEventListenerFactory
+  23:59:32.539 [main] DEBUG com.example.show.c2.TestAnnotationConfigApplicationContext - bean name:testAnnotationConfigApplicationContext.Config
+  23:59:32.540 [main] DEBUG com.example.show.c2.TestAnnotationConfigApplicationContext - bean name:bean1
+  23:59:32.540 [main] DEBUG com.example.show.c2.TestAnnotationConfigApplicationContext - bean name:bean2
+  23:59:32.540 [main] DEBUG com.example.show.c2.TestAnnotationConfigApplicationContext - bean2对象的bean1属性：com.example.show.c2.Bean1@30f842ca
+  ```
+
+> - 可见，***添加了Bean工厂后处理器和Bean后处理器***
+>
+> - 但如果用上面的两个实现类的话，则没有添加后处理器。需要手动在xml配置文件中，添加配置`<context:annotation-config/>`
+
+
+
+### AnnotationConfigServletWebServerApplicationContext
+
+- 特点：***既支持注解，又支持ServletWeb环境***
+
+
+
+```java
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.web.servlet.DispatcherServletRegistrationBean;
+import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
+import org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext;
+import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.DispatcherServlet;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.Controller;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+public class TestAnnotationConfigServletWebServerApplicationContext {
+
+    private static final Logger log = LoggerFactory.getLogger(TestAnnotationConfigServletWebServerApplicationContext.class);
+
+    public static void main(String[] args) {
+        AnnotationConfigServletWebServerApplicationContext context =
+                new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+
+
+    }
+
+    @Configuration
+    static class WebConfig {
+        // 添加Web环境支持
+        // ServletWebServer：基于Servlet技术的Web容器
+        @Bean
+        public ServletWebServerFactory servletWebServerFactory() {
+            return new TomcatServletWebServerFactory();
+        }
+
+        // DispatcherServlet：前控制器
+        @Bean
+        public DispatcherServlet dispatcherServlet() {
+            return new DispatcherServlet();
+        }
+
+        // 注册DispatcherServlet到Tomcat服务器
+        @Bean
+        public DispatcherServletRegistrationBean registrationBean(DispatcherServlet dispatcherServlet) {
+            //  除JSP外的所有请求都先进入DispatcherServlet，由其进行分发至控制器
+            return new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+        }
+
+        // 注意：是Spring提供的Controller接口。
+        // 约定：若Bean以 / 开头，则将该Controller映射到该路径
+        @Bean("/hello")
+        public Controller controller1() {
+            return new Controller() {
+                @Override
+                public ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
+                    response.getWriter().print("hello");
+                    return null;
+                }
+            };
+        }
+    }
+}
+```
+
+访问localhost:8080/login即可
+
+> 收获：
+>
+> - ServletWeb环境的三个必要组件
+> - SpringBoot是如何内嵌Tomcat服务器的
+
+
+
+### 小结
+
+- ClassPathXmlApplicationContext和FileSystemXmlApplicationContext类似，都是从XML配置文件中读取Bean Definition。
+
+  若配置文件中无`<context:annotation-config/>`注解，则Bean工厂中不会有BeanFactory和Bean后处理器
+
+- 非web环境的SpringBoot程序，用的是AnnotationConfigApplicationContext，Web环境下则用的是最后一种。
+
+- 简单Web环境的三个必要组件
+
+
+
+
+
+## Bean的生命周期
+
+[黑马程序员Spring视频教程，全面深度讲解spring5底层原理_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1P44y1N7QG?p=14&spm_id_from=pageDriver)
