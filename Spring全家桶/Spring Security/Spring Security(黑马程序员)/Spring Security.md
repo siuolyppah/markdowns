@@ -773,4 +773,365 @@ public void addViewControllers(ViewControllerRegistry registry) {
 
 # Spring Security快速上手
 
-[黑马程序员Java进阶教程快速入门Spring Security OAuth2.0认证授权_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1VE411h7aL?p=10)
+## Spring Security介绍
+
+Spring Security是一个能够为基于Spring的企业应用系统提供声明式的安全访问控制解决方案的安全框架。由于它 是Spring生态系统中的一员，因此它伴随着整个Spring生态系统不断修正、升级，在spring boot项目中加入spring security更是十分简单，使用Spring Security 减少了为企业系统安全控制编写大量重复代码的工作。
+
+
+
+## 创建工程
+
+### 创建maven工程
+
+创建maven工程 security-spring-security，工程结构如下：
+
+![image-20220430140150032](Spring%20Security.assets/image-20220430140150032.png)
+
+引入以下依赖：
+
+在security-springmvc的基础上增加spring-security的依赖：
+
+```xml
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring‐security‐web</artifactId>
+    <version>5.1.4.RELEASE</version>
+</dependency>
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring‐security‐config</artifactId>
+    <version>5.1.4.RELEASE</version>
+</dependency>
+```
+
+
+
+### Spring容器配置
+
+```java
+package org.example.security.springmvc.config;
+
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.FilterType;
+import org.springframework.stereotype.Controller;
+
+@Configuration
+@ComponentScan(basePackages = "org.example.security.springmvc",
+        excludeFilters = {@ComponentScan.Filter(type = FilterType.ANNOTATION, value = Controller.class)})
+// 相当于applicationContext.xml
+public class ApplicationConfig {
+    //在此配置除了Controller的其它bean，比如：数据库链接池、事务管理器、业务bean等。
+
+}
+```
+
+
+
+### Servlet Context配置
+
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.FilterType;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.view.InternalResourceViewResolver;
+
+@Configuration
+@EnableWebMvc
+@ComponentScan(basePackages = "org.example.springmvc", includeFilters = {@ComponentScan.Filter(type = FilterType.ANNOTATION, value = Controller.class)})
+// 此类相当于springmvc.xml文件
+public class WebConfig implements WebMvcConfigurer {
+
+    // 视图解析器
+    @Bean
+    public InternalResourceViewResolver viewResolver() {
+        InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
+        viewResolver.setPrefix("/WEB-INF/view/");
+        viewResolver.setSuffix(".jsp");
+        return viewResolver;
+    }
+
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        registry.addViewController("/").setViewName("login");
+    }
+}
+```
+
+
+
+### 加载 Spring 容器
+
+在init包下定义Spring容器初始化类SpringApplicationInitializer，此类实现WebApplicationInitializer接口， Spring容器启动时加载WebApplicationInitializer接口的所有实现类。
+
+```java
+package org.example.security.springmvc.init;
+
+import org.example.security.springmvc.config.ApplicationConfig;
+import org.example.security.springmvc.config.WebConfig;
+import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
+
+public class SpringApplicationInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
+
+    // Spring容器，相当于加载applicationContext.xml
+    @Override
+    protected Class<?>[] getRootConfigClasses() {
+        return new Class[]{ApplicationConfig.class};
+    }
+
+    // ServletContext，相当于加载springmvc.xml
+    @Override
+    protected Class<?>[] getServletConfigClasses() {
+        return new Class[]{WebConfig.class};
+    }
+
+    // url-mapping
+    @Override
+    protected String[] getServletMappings() {
+        return new String[]{"/"};
+    }
+}
+```
+
+
+
+
+
+## 认证
+
+### 认证页面
+
+springSecurity默认提供认证页面，不需要额外开发。
+
+![image-20220430141430334](Spring%20Security.assets/image-20220430141430334.png)
+
+
+
+
+
+### 安全配置
+
+spring security提供了用户名密码登录、退出、会话管理等认证功能，只需要配置即可使用。
+
+
+
+1. 在config包下定义WebSecurityConfig，安全配置的内容包括：用户信息、密码编码器、安全拦截机制。
+
+   ```java
+   import org.springframework.context.annotation.Bean;
+   import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+   import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+   import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+   import org.springframework.security.core.userdetails.User;
+   import org.springframework.security.core.userdetails.UserDetailsService;
+   import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+   import org.springframework.security.crypto.password.PasswordEncoder;
+   import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+   
+   @EnableWebSecurity
+   public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+   
+       // 定义用户信息服务（查询用户信息）
+       @Bean
+       public UserDetailsService userDetailsService() {
+           InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
+   
+           manager.createUser(User.withUsername("zhangsan").password("123").authorities("p1").build());
+           manager.createUser(User.withUsername("lisi").password("123").authorities("p1").build());
+   
+           return manager;
+       }
+   
+       // 密码编码器
+       @Bean
+       public PasswordEncoder passwordEncoder() {
+           return NoOpPasswordEncoder.getInstance();
+       }
+   
+       // 配置安全拦截机制
+       @Override
+       protected void configure(HttpSecurity http) throws Exception {
+           http.authorizeRequests()
+                   .antMatchers("/r/**").authenticated()   // 所有/r/**的请求必须认证通过
+                   .anyRequest().permitAll()      // 除了/r/**的请求都可以访问
+                   .and()
+                   .formLogin()    //允许表单登录
+                   .successForwardUrl("/login-success");   // 自定义登录成功的页面地址
+           super.configure(http);
+       }
+   }
+   ```
+
+   在userDetailsService()方法中，我们返回了一个UserDetailsService给spring容器，Spring Security会使用它来 获取用户信息。我们暂时使用InMemoryUserDetailsManager实现类，并在其中分别创建了zhangsan、lisi两个用 户，并设置密码和权限。
+
+   而在configure()中，我们通过HttpSecurity设置了安全拦截规则，其中包含了以下内容：
+
+   （1）url匹配/r/**的资源，经过认证后才能访问。
+
+   （2）其他url完全开放。
+
+   （3）支持form表单认证，认证成功后转向/login-success。
+
+   关于HttpSecurity的配置清单请参考附录 HttpSecurity。
+
+2. 加载 WebSecurityConfig
+
+   修改SpringApplicationInitializer的getRootConfigClasses()方法，添加WebSecurityConfig.class：
+
+   ```java
+   import org.example.springmvc.config.ApplicationConfig;
+   import org.example.springmvc.config.WebConfig;
+   import org.example.springmvc.config.WebSecurityConfig;
+   import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
+   
+   public class SpringApplicationInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
+   
+       // Spring容器，相当于加载applicationContext.xml
+       @Override
+       protected Class<?>[] getRootConfigClasses() {
+           return new Class[]{ApplicationConfig.class, WebSecurityConfig.class};
+       }
+   
+       // ServletContext，相当于加载springmvc.xml
+       @Override
+       protected Class<?>[] getServletConfigClasses() {
+           return new Class[]{WebConfig.class};
+       }
+   
+       // url-mapping
+       @Override
+       protected String[] getServletMappings() {
+           return new String[]{"/"};
+       }
+   }
+   ```
+
+   
+
+### Spring Security初始化
+
+Spring Security初始化，这里有两种情况：
+
+- 若当前环境没有使用Spring或Spring MVC，则需要将 WebSecurityConfig(Spring Security配置类) 传入超类，以确保获取配置，并创建spring context。
+- 相反，若当前环境已经使用spring，我们应该在现有的springContext中注册Spring Security(上一步已经做将WebSecurityConfig加载至rootcontext)，此方法可以什么都不做。
+
+
+
+在init包下定义SpringSecurityApplicationInitializer：
+
+```java
+public class SpringSecurityApplicationInitializer
+    extends AbstractSecurityWebApplicationInitializer {
+    public SpringSecurityApplicationInitializer() {
+        //super(WebSecurityConfig.class);
+    }
+}
+```
+
+
+
+### 默认根路径请求
+
+在WebConfig.java中添加默认请求根路径跳转到/login，此url为spring security提供：
+
+```java
+//默认Url根路径跳转到/login，此url为spring security提供
+@Override
+public void addViewControllers(ViewControllerRegistry registry) {
+    registry.addViewController("/").setViewName("redirect:/login");
+}
+```
+
+spring security默认提供的登录页面。
+
+
+
+### 认证成功页面
+
+在安全配置中，认证成功将跳转到/login-success，代码如下：
+
+```java
+//配置安全拦截机制
+@Override
+protected void configure(HttpSecurity http) throws Exception {
+    http
+        .authorizeRequests()
+        .antMatchers("/r/**").authenticated() （1）
+        .anyRequest().permitAll() （2）
+        .and()
+        .formLogin().successForwardUrl("/login‐success"); （3）
+}
+```
+
+spring security支持form表单认证，认证成功后转向/login-success。
+
+在LoginController中定义/login-success:
+
+```java
+@RequestMapping(value = "/login‐success",produces = {"text/plain;charset=UTF‐8"})
+public String loginSuccess(){
+    return " 登录成功";
+}
+```
+
+
+
+## 授权
+
+实现授权需要对用户的访问进行拦截校验，校验用户的权限是否可以操作指定的资源，Spring Security默认提供授权实现方法。
+
+1. 在LoginController添加/r/r1或/r/r2
+
+   ```java
+   @RestController
+   public class LoginController {
+   
+       @RequestMapping(value = "/login-success", produces = "text/plain;charset=utf-8")
+       public String loginSuccess() {
+           return "登录成功";
+       }
+   
+       @GetMapping(value = "/r/r1",produces = {"text/plain;charset=utf-8"})
+       public String r1(HttpSession session){
+           return "访问资源1";
+       }
+   
+       @GetMapping(value = "/r/r2",produces = {"text/plain;charset=utf-8"})
+       public String r2(HttpSession session){
+           return "访问资源2";
+       }
+   }
+   ```
+
+2. 在安全配置类WebSecurityConfig.java中配置授权规则：
+
+   ```java
+   // 配置安全拦截机制
+   @Override
+   protected void configure(HttpSecurity http) throws Exception {
+       http.authorizeRequests()
+           .antMatchers("/r/r1").hasAnyAuthority("p1")
+           .antMatchers("/r/r2").hasAnyAuthority("p2")
+           .antMatchers("/r/**").authenticated()   // 所有/r/**的请求必须认证通过
+           .anyRequest().permitAll()      // 除了/r/**的请求都可以访问
+           .and()
+           .formLogin()    //允许表单登录
+           .successForwardUrl("/login-success");   // 自定义登录成功的页面地址
+       super.configure(http);
+   }
+   ```
+
+   - .antMatchers("/r/r1").hasAuthority("p1")表示：访问/r/r1资源的 url需要拥有p1权限。 
+
+   - .antMatchers("/r/r2").hasAuthority("p2")表示：访问/r/r2资源的 url需要拥有p2权限。
+
+
+
+# Spring Security 应用详解
+
+[黑马程序员Java进阶教程快速入门Spring Security OAuth2.0认证授权_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1VE411h7aL?p=12)
