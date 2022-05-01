@@ -112,6 +112,7 @@ public class HelloWorldServer {
 ## 半包现象
 
 修改客户端的代码：
+
 ```java
 ByteBuf buffer = ctx.alloc().buffer();
 for (int i = 0; i < 10; i++) {
@@ -756,4 +757,368 @@ public class TestLengthFieldDecoder {
 
 # 协议设计与解析
 
-[黑马程序员Netty全套教程，全网最全Netty深入浅出教程，Java网络编程的王者_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1py4y1E7oA?p=99)
+## redis 协议举例
+
+对于如下的Redis命令：
+
+```
+set name zhangsan
+```
+
+将该条命令，视作有三个元素的数组，发送：
+
+```
+*3
+$3
+set
+$4
+name
+$8
+zhangsan
+```
+
+
+
+```java
+@Slf4j
+public class TestRedis {
+
+    public static void main(String[] args) {
+        final byte[] LINE = "\r\n".getBytes(StandardCharsets.UTF_8);
+        NioEventLoopGroup worker = new NioEventLoopGroup();
+
+
+        try {
+            Bootstrap bootstrap = new Bootstrap();
+            bootstrap.channel(NioSocketChannel.class);
+            bootstrap.group(worker);
+            bootstrap.handler(new ChannelInitializer<SocketChannel>() {
+
+                @Override
+                protected void initChannel(SocketChannel ch) throws Exception {
+                    ch.pipeline().addLast(new LoggingHandler());
+                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                            ByteBuf buf = ctx.alloc().buffer();
+                            buf.writeBytes("*3".getBytes());
+                            buf.writeBytes(LINE);
+                            buf.writeBytes("$3".getBytes());
+                            buf.writeBytes(LINE);
+                            buf.writeBytes("set".getBytes());
+                            buf.writeBytes(LINE);
+                            buf.writeBytes("$4".getBytes());
+                            buf.writeBytes(LINE);
+                            buf.writeBytes("name".getBytes());
+                            buf.writeBytes(LINE);
+                            buf.writeBytes("$8".getBytes());
+                            buf.writeBytes(LINE);
+                            buf.writeBytes("zhangsan".getBytes());
+                            buf.writeBytes(LINE);
+                            ctx.writeAndFlush(buf);
+                        }
+
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                            ByteBuf buf = (ByteBuf) msg;
+                            log.debug("接收来自Redis的响应：{}", buf.toString(StandardCharsets.UTF_8));
+                        }
+                    });
+                }
+            });
+
+            ChannelFuture channelFuture = bootstrap.connect("localhost", 6379).sync();
+            channelFuture.channel().closeFuture().sync();
+        } catch (InterruptedException e) {
+            log.error("client error", e);
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+> Redis命令：
+>
+> - flushall：清空所有
+> - get key
+
+
+
+## HTTP协议举例
+
+```java
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.*;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.http.*;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
+import lombok.extern.slf4j.Slf4j;
+
+import java.nio.charset.StandardCharsets;
+
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+
+@Slf4j
+public class TestHttp {
+
+    public static void main(String[] args) {
+        NioEventLoopGroup boss = new NioEventLoopGroup();
+        NioEventLoopGroup worker = new NioEventLoopGroup();
+
+        ServerBootstrap serverBootstrap = new ServerBootstrap();
+        serverBootstrap.channel(NioServerSocketChannel.class);
+        serverBootstrap.group(boss, worker);
+        serverBootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
+
+            @Override
+            protected void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
+                ch.pipeline().addLast(new HttpServerCodec());       // 编解码器
+//                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+//                    @Override
+//                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+//                        log.debug("{}", msg.getClass());
+//
+//                        if (msg instanceof HttpRequest) {   // 包含请求行和请求头
+//                        }
+//                        if (msg instanceof HttpContent) {    // 请求体
+//                        }
+//
+//                        super.channelRead(ctx, msg);
+//                    }
+//                });
+
+                // 只处理HttpRequest类型
+                ch.pipeline().addLast(new SimpleChannelInboundHandler<HttpRequest>() {
+                    @Override
+                    protected void channelRead0(ChannelHandlerContext ctx, HttpRequest msg) throws Exception {
+                        log.debug(msg.uri());
+
+                        DefaultFullHttpResponse response =
+                                new DefaultFullHttpResponse(msg.protocolVersion(), HttpResponseStatus.OK);
+                        byte[] bytes = "<h1>Hello,World!".getBytes(StandardCharsets.UTF_8);
+                        response.headers().setInt(CONTENT_LENGTH, bytes.length);
+                        response.content().writeBytes(bytes);
+
+                        ctx.writeAndFlush(response);    // 之后Response将经过编解码器
+                    }
+                });
+
+            }
+        });
+        try {
+            ChannelFuture channelFuture = serverBootstrap.bind(8080).sync();
+            channelFuture.channel().closeFuture().sync();
+        } catch (InterruptedException e) {
+            log.error("server error", e);
+            e.printStackTrace();
+        } finally {
+            boss.shutdownGracefully();
+            worker.shutdownGracefully();
+        }
+    }
+}
+```
+
+
+
+## 自定义协议要素
+
+* 魔数，用来在第一时间判定是否是无效数据包
+* 版本号，可以支持协议的升级
+* 序列化算法，消息正文到底采用哪种序列化反序列化方式，可以由此扩展，例如：json、protobuf、hessian、jdk
+* 指令类型，是登录、注册、单聊、群聊... 跟业务相关
+* 请求序号，为了双工通信，提供异步能力
+* 正文长度
+* 消息正文
+
+
+
+### 编解码器
+
+- Message抽象类：
+
+  ```java
+  @Data
+  public abstract class Message implements Serializable {
+  
+      private int sequenceId;
+  
+      public abstract int getMessageType();
+  
+      public static final int LoginRequestMessage = 0;            // 登录请求消息
+      public static final int LoginResponseMessage = 1;           // 登录响应
+      public static final int ChatRequestMessage = 2;             // 聊天请求
+      public static final int ChatResponseMessage = 3;            // 聊天响应
+      public static final int GroupCreateRequestMessage = 4;      // 创建聊天室请求
+      public static final int GroupCreateResponseMessage = 5;
+      public static final int GroupJoinRequestMessage = 6;
+      public static final int GroupJoinResponseMessage = 7;
+      public static final int GroupQuitRequestMessage = 8;
+      public static final int GroupQuitResponseMessage = 9;
+      public static final int GroupChatRequestMessage = 10;
+      public static final int GroupChatResponseMessage = 11;
+      public static final int GroupMembersRequestMessage = 12;
+      public static final int GroupMembersResponseMessage = 13;
+      public static final int PingMessage = 14;
+      public static final int PongMessage = 15;
+  }
+  ```
+
+- Message的一个子类：
+
+  ```java
+  @Data
+  @ToString(callSuper = true)
+  public class LoginRequestMessage extends Message {
+      private String username;
+      private String password;
+  
+      public LoginRequestMessage() {
+      }
+  
+      public LoginRequestMessage(String username, String password) {
+          this.username = username;
+          this.password = password;
+      }
+  
+      @Override
+      public int getMessageType() {
+          return LoginRequestMessage;
+      }
+  }
+  
+  ```
+
+- 编解码器：
+
+  ```java
+  import io.netty.buffer.ByteBuf;
+  import io.netty.channel.ChannelHandlerContext;
+  import io.netty.handler.codec.ByteToMessageCodec;
+  import lombok.extern.slf4j.Slf4j;
+  import org.example.message.Message;
+  
+  import java.io.ByteArrayInputStream;
+  import java.io.ByteArrayOutputStream;
+  import java.io.ObjectInputStream;
+  import java.io.ObjectOutputStream;
+  import java.util.List;
+  
+  
+  @Slf4j
+  public class MessageCodec extends ByteToMessageCodec<Message> {
+  
+      // 编码，出站前将Message转为ByteBuf
+      @Override
+      protected void encode(ChannelHandlerContext ctx, Message msg, ByteBuf out) throws Exception {
+          out.writeBytes(new byte[]{1, 2, 3, 4});     // 魔数
+          out.writeByte(1);                           // 版本
+          out.writeByte(0);                           // 表示序列化方式的一个字节。0表示jdk，1表示json
+          out.writeByte(msg.getMessageType());        // 指令类型
+          out.writeInt(msg.getSequenceId());          // 请求序号
+          out.writeByte(0xff);    // 对齐2的n次的填充字节
+  
+          ByteArrayOutputStream bos = new ByteArrayOutputStream();
+          ObjectOutputStream oos = new ObjectOutputStream(bos);
+          oos.writeObject(msg);
+          byte[] bytes = bos.toByteArray();
+  
+          out.writeInt(bytes.length);                 // 正文长度
+          out.writeBytes(bytes);                      // 消息正文
+          log.debug("写出Message对象：{}", msg);
+      }
+  
+      // 解码；入站时将ByteBuf转为Message
+      @Override
+      protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+          int magicNum = in.readInt();
+          byte version = in.readByte();
+          byte serializerType = in.readByte();
+          byte messageType = in.readByte();
+          int sequenceId = in.readInt();
+          in.readByte();
+          int length = in.readInt();
+          byte[] bytes = new byte[length];
+          in.readBytes(bytes, 0, length);
+  
+  
+          ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(bytes));
+          Message message = (Message) ois.readObject();
+  
+          log.debug("接收到的Message:{}", message);
+          out.add(message);
+      }
+  }
+  ```
+
+- 测试类：
+
+  ```java
+  public class TestMessageCodec {
+  
+      public static void main(String[] args) throws Exception {
+          EmbeddedChannel channel = new EmbeddedChannel(
+              new LengthFieldBasedFrameDecoder(1024, 12, 4, 0, 0),
+              new LoggingHandler(LogLevel.DEBUG),
+              new MessageCodec());
+  
+          // 测试encode
+          LoginRequestMessage message = new LoginRequestMessage("zhangsan", "123");
+          channel.writeOutbound(message);
+  
+          // 测试decode
+          ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
+          new MessageCodec().encode(null, message, buf);
+          channel.writeInbound(buf);
+  
+      }
+  }
+  ```
+
+  > 使用LengthFieldBasedFrameDecoder，解决黏包、半包问题
+
+
+
+
+
+## 关于Handler的线程安全问题
+
+当 handler 不保存状态时，就可以安全地在多线程下被共享。例如：
+
+- LengthFieldBasedFrameDecoder是非线程安全的。
+- LoggingHandler是线程安全的。
+
+
+
+特别的，Netty提供的Handler，凡是线程安全的，都标有`@Sharable`注解。例如：
+
+```java
+@Sharable
+public class LoggingHandler extends ChannelDuplexHandler {...}
+```
+
+> 但要注意：
+>
+> - 继承自 ByteToMessageCodec 或 CombinedChannelDuplexHandler 的类，不能添加@Sharable。因为这两个父类的构造方法对 @Sharable 有限制。
+>
+>   ```java
+>   protected ByteToMessageCodec(boolean preferDirect) {
+>       ensureNotSharable();
+>       outboundMsgMatcher = TypeParameterMatcher.find(this, ByteToMessageCodec.class, "I");
+>       encoder = new Encoder(preferDirect);
+>   }
+>   ```
+>
+> - 如果能确保编解码器不会保存状态，可以继承 MessageToMessageCodec 类，从而可以添加@Sharable
+
+
+
+
+
+# 聊天室案例
+
+[黑马程序员Netty全套教程，全网最全Netty深入浅出教程，Java网络编程的王者_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1py4y1E7oA?p=108)
