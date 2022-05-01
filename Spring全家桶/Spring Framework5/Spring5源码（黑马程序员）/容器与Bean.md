@@ -806,6 +806,520 @@ public class TestAnnotationConfigServletWebServerApplicationContext {
 
 
 
-## Bean的生命周期
+# Bean的生命周期
 
-[黑马程序员Spring视频教程，全面深度讲解spring5底层原理_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1P44y1N7QG?p=14&spm_id_from=pageDriver)
+## 生命周期的流程
+
+一个受 Spring 管理的 bean，生命周期主要阶段有
+
+1. 创建：根据 bean 的构造方法或者工厂方法来创建 bean 实例对象
+
+2. 依赖注入：根据 @Autowired，@Value 或其它一些手段，为 bean 的成员变量填充值、建立关系
+
+3. 初始化：回调各种 Aware 接口，调用对象的各种初始化方法
+
+4. 销毁：在容器关闭时，会销毁所有单例对象（即调用它们的销毁方法）
+
+   > prototype 对象也能够销毁，不过需要容器这边主动调用
+
+
+
+```mermaid
+graph LR
+
+创建 --> 依赖注入
+依赖注入 --> 初始化
+初始化 --> 可用
+可用 --> 销毁
+```
+
+
+
+- 启动类：
+
+  ```java
+  @SpringBootApplication
+  public class A03Application {
+      public static void main(String[] args) {
+          ConfigurableApplicationContext context = SpringApplication.run(A03Application.class, args);
+  
+          context.close();
+      }
+  }
+  ```
+
+- 演示生命周期的Bean：
+
+  ```java
+  @Component
+  public class LifeCircleBean {
+  
+      private static final Logger log = LoggerFactory.getLogger(LifeCircleBean.class);
+  
+      public LifeCircleBean() {
+          log.debug("构造方法被调用");
+      }
+  
+      @Autowired
+      public void autowire(@Value("${JAVA_HOME}") String home) {
+          log.debug("依赖注入：{}", home);
+      }
+  
+      @PostConstruct
+      public void init(){
+          log.debug("初始化");
+      }
+  
+      @PreDestroy
+      public void destroy(){
+          log.debug("销毁");
+      }
+  }
+  ```
+
+- 输出：
+
+  ```
+  2022-05-01 13:35:31.045 DEBUG 6248 --- [           main] com.example.show.c3.LifeCircleBean       : 构造方法被调用
+  2022-05-01 13:35:31.048 DEBUG 6248 --- [           main] com.example.show.c3.LifeCircleBean       : 依赖注入：C:\Users\G_xy\.jdks\corretto-11.0.15
+  2022-05-01 13:35:31.049 DEBUG 6248 --- [           main] com.example.show.c3.LifeCircleBean       : 初始化
+  2022-05-01 13:35:31.334 DEBUG 6248 --- [           main] com.example.show.c3.LifeCircleBean       : 销毁
+  ```
+
+  
+
+
+
+## Bean后处理器的六个扩展点
+
+***Bean后处理器，为Bean生命周期的各个阶段提供拓展***：
+
+- 实例化前后
+- 依赖注入阶段
+- 初始化前后
+- 销毁之前
+
+```java
+@Component
+public class MyBeanPostProcessor implements InstantiationAwareBeanPostProcessor, DestructionAwareBeanPostProcessor {
+
+    private static final Logger log = LoggerFactory.getLogger(MyBeanPostProcessor.class);
+
+    @Override
+    public void postProcessBeforeDestruction(Object bean, String beanName) throws BeansException {
+        if (beanName.equals("lifeCycleBean"))
+            log.debug("<<<<<< 销毁之前执行, 如 @PreDestroy");
+    }
+
+    // 调用构造方法前执行
+    @Override
+    public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) throws BeansException {
+        if (beanName.equals("lifeCycleBean"))
+            log.debug("<<<<<< 实例化之前执行, 这里返回的对象会替换掉原本的 bean");
+        return null;    // 为null则不替换
+    }
+
+    @Override
+    public boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
+        if (beanName.equals("lifeCycleBean")) {
+            log.debug("<<<<<< 实例化之后执行, 这里如果返回 false 会跳过依赖注入阶段");
+//             return false;
+        }
+        return true;
+    }
+
+    // 依赖注入阶段
+    @Override
+    public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
+        if (beanName.equals("lifeCycleBean"))
+            log.debug("<<<<<< 依赖注入阶段执行, 如 @Autowired、@Value、@Resource");
+        return pvs;
+    }
+
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        if (beanName.equals("lifeCycleBean"))
+            log.debug("<<<<<< 初始化之前执行, 这里返回的对象会替换掉原本的 bean, 如 @PostConstruct、@ConfigurationProperties");
+        return bean;
+    }
+
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        if (beanName.equals("lifeCycleBean"))
+            log.debug("<<<<<< 初始化之后执行, 这里返回的对象会替换掉原本的 bean, 如代理增强");
+        return bean;
+    }
+}
+```
+
+
+
+## 模板方法设计模式
+
+***用于在不改写现有代码基础上，对其进行增强拓展***
+
+
+
+例如：
+
+```java
+public class TestMethodTemplate {
+
+    public static void main(String[] args) {
+        MyBeanFactory beanFactory = new MyBeanFactory();
+
+        beanFactory.addBeanPostProcessor(bean -> System.out.println("解析@Autowired"));
+        beanFactory.addBeanPostProcessor(bean -> System.out.println("解析@Resource"));
+
+        beanFactory.getBean();
+    }
+
+    // 模板方法 Template Method Pattern
+    static class MyBeanFactory {
+        public Object getBean() {
+            Object bean = new Object();
+            System.out.println("构造" + bean);
+            System.out.println("依赖注入" + bean);
+
+            processors.forEach(processor -> {
+                processor.inject(bean);
+            });
+
+            System.out.println("初始化" + bean);
+            System.out.println("销毁" + bean);
+            return bean;
+        }
+
+        private List<BeanPostProcessor> processors = new ArrayList<>();
+
+        public void addBeanPostProcessor(BeanPostProcessor beanPostProcessor) {
+            processors.add(beanPostProcessor);
+        }
+    }
+
+    static interface BeanPostProcessor {
+        public void inject(Object bean);       // 对依赖注入阶段进行增强
+    }
+}
+```
+
+
+
+精髓在于：
+
+- 对于方法中，不改动固定不变的步骤
+- ***对于在设计时<u>不能确定的部分</u>（例如依赖注入的拓展），将其抽象为接口***。通过接口的回调，实现功能的增强。
+
+
+
+
+
+# Bean后处理器
+
+## 解析常用注解的后处理器
+
+- `AutowiredAnnotationBeanPostProcessor`：解析@Autowired和@Value
+
+  > 需要进行如下操作，以提供@Value的值获取：
+  >
+  > ```java
+  > context.getDefaultListableBeanFactory().setAutowireCandidateResolver(new ContextAnnotationAutowireCandidateResolver());
+  > ```
+
+- `CommonAnnotationBeanPostProcessor`：解析@Resource、@PostConstruct 、@PreDestroy
+
+
+
+测试代码如下：
+
+- 实体类：(其中Bean2和Bean3是空定义)
+
+  ```java
+  public class Bean1 {
+  
+      private static final Logger log = LoggerFactory.getLogger(Bean1.class);
+  
+      private Bean2 bean2;
+  
+      private Bean3 bean3;
+  
+      private String home;
+  
+      @Autowired
+      public void setBean2(Bean2 bean2) {
+          log.debug("@Autowired注解生效");
+          this.bean2 = bean2;
+      }
+  
+      @Resource
+      public void setBean3(Bean3 bean3) {
+          log.debug("@Resource注解生效");
+          this.bean3 = bean3;
+      }
+  
+      @Autowired
+      public void setHome(@Value("${JAVA_HOME}") String home) {
+          log.debug("@Autowired + @Value 注解生效：{}", home);
+          this.home = home;
+      }
+  
+      @PostConstruct
+      public void init() {
+          log.debug("@PostConstruct 生效");
+      }
+  
+      @PreDestroy
+      public void destroy() {
+          log.debug("@PreDestroy 生效");
+      }
+  
+      @Override
+      public String toString() {
+          return "Bean1{" +
+                  "bean2=" + bean2 +
+                  ", bean3=" + bean3 +
+                  ", home='" + home + '\'' +
+                  '}';
+      }
+  }
+  ```
+
+- 测试类：
+
+  ```java
+  public class A04Application {
+  
+      private static final Logger log = LoggerFactory.getLogger(A04Application.class);
+  
+      public static void main(String[] args) {
+          // 未添加Bean后处理器和BeanFactory后处理器
+          GenericApplicationContext context = new GenericApplicationContext();
+  
+          context.registerBean("bean1", Bean1.class);
+          context.registerBean("bean2", Bean2.class);
+          context.registerBean("bean3", Bean3.class);     // 目前为止，注解都没有被解析
+  
+          context.getDefaultListableBeanFactory().setAutowireCandidateResolver(new ContextAnnotationAutowireCandidateResolver());     // 提供@Value的值获取
+          context.registerBean(AutowiredAnnotationBeanPostProcessor.class);   // 解析@Autowired和@Value
+  
+          context.registerBean(CommonAnnotationBeanPostProcessor.class);  // 解析@Resource @PostConstruct @PreDestroy
+  
+  
+          // 初始化容器：
+          // 1. 执行容器内的BeanFactory后处理器；
+          // 2. 关联容器内的Bean后处理器
+          // 3. 构造所有的单例对象
+          context.refresh();
+  
+  
+          // 销毁容器
+          context.close();
+      }
+  }
+  ```
+
+  
+
+## 解析@ConfigurationProperties
+
+- 实体类：
+
+  ```java
+  @ConfigurationProperties(prefix = "java")
+  public class Bean4 {
+      private String home;
+  
+      private String version;
+  
+      public String getHome() {
+          return home;
+      }
+  
+      public void setHome(String home) {
+          this.home = home;
+      }
+  
+      public String getVersion() {
+          return version;
+      }
+  
+      public void setVersion(String version) {
+          this.version = version;
+      }
+  
+      @Override
+      public String toString() {
+          return "Bean4{" +
+                  "home='" + home + '\'' +
+                  ", version='" + version + '\'' +
+                  '}';
+      }
+  }
+  ```
+
+- 测试类：
+
+  ```java
+  public class A04Application {
+  
+      private static final Logger log = LoggerFactory.getLogger(A04Application.class);
+  
+      public static void main(String[] args) {
+          // 未添加Bean后处理器和BeanFactory后处理器
+          GenericApplicationContext context = new GenericApplicationContext();
+  
+          context.registerBean("bean1", Bean1.class);
+          context.registerBean("bean2", Bean2.class);
+          context.registerBean("bean3", Bean3.class);
+          context.registerBean("bean4", Bean4.class);
+  
+  
+          context.getDefaultListableBeanFactory().setAutowireCandidateResolver(new ContextAnnotationAutowireCandidateResolver());     // 提供@Value的值获取
+          context.registerBean(AutowiredAnnotationBeanPostProcessor.class);   // 解析@Autowired和@Value
+  
+          context.registerBean(CommonAnnotationBeanPostProcessor.class);  // 解析@Resource @PostConstruct @PreDestroy
+  
+          ConfigurationPropertiesBindingPostProcessor
+                  .register(context.getDefaultListableBeanFactory());  //解析@ConfigurationProperties
+  
+          // 初始化容器：
+          // 1. 执行容器内的BeanFactory后处理器；
+          // 2. 关联容器内的Bean后处理器
+          // 3. 构造所有的单例对象
+          context.refresh();
+  
+          System.out.println(context.getBean("bean4", Bean4.class));
+  
+  
+          // 销毁容器
+          context.close();
+      }
+  }
+  ```
+
+
+
+## AutowiredAnnotationBeanPostProcessor详解
+
+- [视频链接](https://www.bilibili.com/video/BV1P44y1N7QG?p=18&spm_id_from=pageDriver)
+
+
+
+`org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor#postProcessProperties`方法提供了对@Autowired和@Value注解的解析：（其中Bean1定义[同上](#解析常用注解的后处理器)）
+
+```java
+public class DigInAutoWired {
+
+    public static void main(String[] args) throws Throwable {
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+
+        // 注意，用该方法注册的Bean，不再有：创建、依赖注入、初始化
+        beanFactory.registerSingleton("bean2", new Bean2());
+        beanFactory.registerSingleton("bean3", new Bean3());
+
+        // 对@Value获取值提供支持
+        beanFactory.setAutowireCandidateResolver(new ContextAnnotationAutowireCandidateResolver());
+
+        // 对${}表达式提供解析
+        beanFactory.addEmbeddedValueResolver(new StandardEnvironment()::resolvePlaceholders);
+
+        AutowiredAnnotationBeanPostProcessor processor = new AutowiredAnnotationBeanPostProcessor();
+        processor.setBeanFactory(beanFactory);
+
+        Bean1 bean1 = new Bean1();
+        // 演示postProcessProperties方法的作用。
+        // System.out.println(bean1);
+        // processor.postProcessProperties(null, bean1, "bean1");     // 执行依赖注入
+        // System.out.println(bean1);
+
+        // 模拟BeanFactory使用processor的流程
+        // 1. 查找哪些属性和方法，添加了@Autowired注解。此过程称之为InjectionMetadata
+        Method findAutowiringMetadata =
+                AutowiredAnnotationBeanPostProcessor.class.getDeclaredMethod("findAutowiringMetadata", String.class, Class.class, PropertyValues.class);
+        findAutowiringMetadata.setAccessible(true);
+        // 返回的结果对象，封装了Bean1上添加@Value和@Autowired注解的成员变量和方法参数
+        InjectionMetadata metadata = (InjectionMetadata) findAutowiringMetadata.invoke(processor, "bean1", Bean1.class, null);
+
+        // 2.使用InjectionMetadata进行依赖注入（注入时按类型查找）
+        metadata.inject(bean1, "bean1", null);
+        System.out.println(bean1);
+        
+    }
+}
+```
+
+
+
+再看inject()方法的更内部细节：
+
+1. 在Bean1类中，将bean3属性改为用@Autowired注解注入
+
+2. 测试代码如下：
+
+   ```java
+   public class DigInAutoWired {
+   
+       public static void main(String[] args) throws Throwable {
+           DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+   
+           // 注意，用该方法注册的Bean，不再有：创建、依赖注入、初始化
+           beanFactory.registerSingleton("bean2", new Bean2());
+           beanFactory.registerSingleton("bean3", new Bean3());
+   
+           // 对@Value获取值提供支持
+           beanFactory.setAutowireCandidateResolver(new ContextAnnotationAutowireCandidateResolver());
+   
+           // 对${}表达式提供解析
+           beanFactory.addEmbeddedValueResolver(new StandardEnvironment()::resolvePlaceholders);
+   
+           AutowiredAnnotationBeanPostProcessor processor = new AutowiredAnnotationBeanPostProcessor();
+           processor.setBeanFactory(beanFactory);
+   
+   //        Bean1 bean1 = new Bean1();
+           // 演示postProcessProperties方法的作用。
+           // System.out.println(bean1);
+           // processor.postProcessProperties(null, bean1, "bean1");     // 执行依赖注入
+           // System.out.println(bean1);
+   
+           // 模拟BeanFactory使用processor的流程
+           // 1. 查找哪些属性和方法，添加了@Autowired注解。此过程称之为InjectionMetadata
+   //        Method findAutowiringMetadata =
+   //                AutowiredAnnotationBeanPostProcessor.class.getDeclaredMethod("findAutowiringMetadata", String.class, Class.class, PropertyValues.class);
+   //        findAutowiringMetadata.setAccessible(true);
+   //        // 返回的结果对象，封装了Bean1上添加@Value和@Autowired注解的成员变量和方法参数
+   //        InjectionMetadata metadata = (InjectionMetadata) findAutowiringMetadata.invoke(processor, "bean1", Bean1.class, null);
+   
+           // 2.使用InjectionMetadata进行依赖注入（注入时按类型查找）
+   //        metadata.inject(bean1, "bean1", null);
+   //        System.out.println(bean1);
+   
+           // 更深入的：
+           // 注入属性的过程：
+           Field bean3 = Bean1.class.getDeclaredField("bean3");
+           DependencyDescriptor dd1 = new DependencyDescriptor(bean3, false);   //true意味着找不到就报错
+           Object o = beanFactory.doResolveDependency(dd1, null, null, null);
+           System.out.println(o);      // 在容器中找到了Bean3类型的对象，然后通过反射将其注入bean1对象
+   
+           // 注入方法的过程：
+           Method setBean2 = Bean1.class.getDeclaredMethod("setBean2", Bean2.class);
+           DependencyDescriptor dd2
+                   = new DependencyDescriptor(new MethodParameter(setBean2, 0), false);
+           Object o2 = beanFactory.doResolveDependency(dd2, null, null, null);
+           System.out.println(o2);     // 在容器中找到了Bean2类型的对象，然后通过反射将其注入方法的参数
+   
+           // 注入Value
+           Method setHome = Bean1.class.getDeclaredMethod("setHome", String.class);
+           DependencyDescriptor dd3
+                   = new DependencyDescriptor(new MethodParameter(setHome, 0), false);
+           Object o3 = beanFactory.doResolveDependency(dd3, null, null, null);
+           System.out.println(o3);
+       }
+   }
+   ```
+
+   
+
+# BeanFactory后处理器
+
+[黑马程序员Spring视频教程，全面深度讲解spring5底层原理_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1P44y1N7QG?p=20&spm_id_from=pageDriver)
+
