@@ -539,4 +539,338 @@ class GuardedObject {
   22:03:29 [consumer] c.MessageQueue - 队列为空,消费者线程进入等待
   ```
 
-  
+
+
+
+
+
+# 同步模式之顺序控制
+
+
+
+## 固定运行顺序
+
+比如，存在一种需求，必须先 2 再1 。
+
+
+
+### wait-notify实现
+
+```java
+@Slf4j(topic = "c.Test25")
+public class Test25 {
+
+    private static final Object obj = new Object();
+    private static boolean done = false;
+
+    public static void main(String[] args) {
+        Thread t1 = new Thread(() -> {
+            synchronized (obj) {
+                while (!done) {
+                    try {
+                        obj.wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                log.debug("1");
+            }
+        }, "t1");
+
+        Thread t2 = new Thread(() -> {
+            synchronized (obj) {
+                done = true;
+                log.debug("2");
+
+                obj.notifyAll();
+            }
+        }, "t2");
+
+        t1.start();
+        t2.start();
+    }
+}
+```
+
+
+
+### ReentrantLock(await-signalAll)实现
+
+```java
+@Slf4j(topic = "c.Test26")
+public class Test26 {
+
+    private static final ReentrantLock lock = new ReentrantLock();
+    private static boolean done = false;
+
+    public static void main(String[] args) {
+        Condition isDone = lock.newCondition();
+
+        Thread t1 = new Thread(() -> {
+            lock.lock();
+            try {
+                while (!done) {
+                    try {
+                        isDone.await();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                log.debug("1");
+            } finally {
+                lock.unlock();
+            }
+        }, "t1");
+
+        Thread t2 = new Thread(() -> {
+            lock.lock();
+            try {
+                done = true;
+                log.debug("2");
+
+                isDone.signalAll();
+            } finally {
+                lock.unlock();
+            }
+        }, "t2");
+
+        t1.start();
+        t2.start();
+    }
+}
+```
+
+
+
+### LockSupport(park-unpark)实现
+
+```java
+@Slf4j(topic = "c.Test27")
+public class Test27 {
+
+    public static void main(String[] args) {
+        Thread t1 = new Thread(() -> {
+            LockSupport.park();
+            log.debug("1");
+        }, "t1");
+
+        Thread t2 = new Thread(() -> {
+            log.debug("2");
+            LockSupport.unpark(t1);
+        }, "t2");
+
+        t1.start();
+        t2.start();
+    }
+}
+```
+
+
+
+## 交替运行顺序
+
+线程 1 输出 a 5 次，线程 2 输出 b 5 次，线程 3 输出 c 5 次。现在要求输出 abcabcabcabcabc 怎么实现
+
+
+
+### wait-notify实现
+
+```java
+@Slf4j(topic = "c.Test28")
+public class Test28 {
+
+    public static void main(String[] args) {
+        FlagObject flagObject = new FlagObject(1, 5);
+
+        new Thread(() -> {
+            flagObject.print("a", 1, 2);
+        }, "t1").start();
+
+        new Thread(() -> {
+            flagObject.print("b", 2, 3);
+        }, "t2").start();
+
+        new Thread(() -> {
+            flagObject.print("c", 3, 1);
+        }, "t3").start();
+    }
+}
+
+@Slf4j(topic = "c.FlagObject")
+class FlagObject {
+    private int flag;
+
+    private int loopNumber;
+
+    public FlagObject(int flag, int loopNumber) {
+        this.flag = flag;
+        this.loopNumber = loopNumber;
+    }
+
+    public synchronized void print(String str, int waitFlag, int nextFlag) {
+        for (int i = 0; i < loopNumber; i++) {
+            while (flag != waitFlag) {
+                try {
+                    this.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            log.debug("{}", str);
+
+            flag = nextFlag;
+            this.notifyAll();
+        }
+    }
+}
+```
+
+
+
+### ReentrantLock实现
+
+```java
+public class Test29 {
+
+    public static void main(String[] args) throws InterruptedException {
+        AwaitSignal awaitSignal = new AwaitSignal(5);
+        Condition conditionA = awaitSignal.newCondition();
+        Condition conditionB = awaitSignal.newCondition();
+        Condition conditionC = awaitSignal.newCondition();
+
+        Thread stater = new Thread(() -> {
+            LockSupport.park();
+            awaitSignal.lock();
+            try {
+                conditionA.signalAll();
+            } finally {
+                awaitSignal.unlock();
+            }
+        }, "stater");
+
+        stater.start();
+
+
+        new Thread(() -> {
+            awaitSignal.print(conditionA, "a", conditionB, stater);
+        }, "t1").start();
+
+        new Thread(() -> {
+            awaitSignal.print(conditionB, "b", conditionC, stater);
+        }, "t2").start();
+
+        new Thread(() -> {
+            awaitSignal.print(conditionC, "c", conditionA, stater);
+        }, "t3").start();
+
+    }
+}
+
+@Slf4j(topic = "c.AwaitSignal")
+class AwaitSignal extends ReentrantLock {
+    private int loopNumber;
+    private int lockedNum = 0;
+
+    public int getLockedNum() {
+        return lockedNum;
+    }
+
+    public AwaitSignal(int loopNumber) {
+        this.loopNumber = loopNumber;
+    }
+
+    public void print(Condition current, String msg, Condition next, Thread thread) {
+        for (int i = 0; i < loopNumber; i++) {
+            this.lock();
+            if (++lockedNum == 3) {
+                LockSupport.unpark(thread);
+            }
+
+            try {
+                try {
+                    current.await();
+                    log.debug("{}", msg);
+                    next.signalAll();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            } finally {
+                this.lockedNum--;
+                this.unlock();
+            }
+        }
+    }
+}
+```
+
+
+
+### LockSupport实现
+
+```java
+@Slf4j(topic = "c.Test30")
+public class Test30 {
+
+    private static Thread t1;
+    private static Thread t2;
+    private static Thread t3;
+
+    public static void main(String[] args) {
+        ParkUnpark pu = new ParkUnpark(5);
+
+        Thread starter = new Thread(() -> {
+            LockSupport.park();
+            LockSupport.unpark(t1);
+        }, "starter");
+
+        t1 = new Thread(() -> {
+            pu.print("a", t2, starter);
+        }, "t1");
+
+        t2 = new Thread(() -> {
+            pu.print("b", t3, starter);
+        }, "t2");
+
+        t3 = new Thread(() -> {
+            pu.print("c", t1, starter);
+        }, "t3");
+
+        t1.start();
+        t2.start();
+        t3.start();
+        starter.start();
+    }
+}
+
+@Slf4j(topic = "c.ParkUnpark")
+class ParkUnpark {
+    private int loopNumber;
+    private int parked = 0;
+    private boolean started;
+
+    public ParkUnpark(int loopNumber) {
+        this.loopNumber = loopNumber;
+    }
+
+    public void print(String msg, Thread next, Thread starter) {
+        for (int i = 0; i < loopNumber; i++) {
+            if (!started) {
+                synchronized (this) {
+                    if (++parked == 3) {
+                        LockSupport.unpark(starter);
+                        started = true;
+                    }
+                }
+            }
+
+            LockSupport.park();
+            log.debug("{}", msg);
+            LockSupport.unpark(next);
+        }
+    }
+}
+```
+
