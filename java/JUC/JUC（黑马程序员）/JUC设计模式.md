@@ -108,11 +108,69 @@ class TwoPhaseTermination {
 
 
 
-说明：
+说明：关于interrupt()
+
+- 若被interrupt的线程，处于非阻塞状态，将设置打断标记为true
+- 否则，将清除打断标记并抛出异常。
+
+因此，有如下情况：
 
 - 当monitor线程正常运行时被打断，将设置打断标记为true
-- 当monitor线程处于sleep时被打断，打断标记将被清除，并抛出InterruptedException异常，从而进行catch块，将再次调用interrupt方法，设置打断标记为true
-- 当检测到当前线程的打断标记为真时，进行后续处理操作，安全结束线程
+
+- 当monitor线程处于sleep时被打断，打断标记将被清除，并抛出InterruptedException异常，从而进入catch块，将再次调用interrupt方法，设置打断标记为true
+
+  当检测到当前线程的打断标记为真时，进行后续处理操作，安全结束线程
+
+
+
+### 利用volitile实现
+
+```java
+public class Test8 {
+    public static void main(String[] args) throws InterruptedException {
+        TwoPhaseTermination tpt = new TwoPhaseTermination();
+
+        tpt.start();
+        Thread.sleep(5_000);
+        tpt.stop();
+    }
+}
+
+@Slf4j(topic = "c.monitor")
+class TwoPhaseTermination {
+    private Thread monitor;
+    private volatile boolean stop;
+
+    public void start() {
+        monitor = new Thread(() -> {
+            while (true) {
+                if (stop) {
+                    log.debug("线程被打断，将要退出");
+                    break;
+                }
+
+                try {
+                    Thread.sleep(2_000);
+                    log.debug("记录监控信息");
+                } catch (InterruptedException e) {
+
+                    stop = true;    
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        monitor.start();
+    }
+
+    public void stop() {
+        stop = true;
+                monitor.interrupt();	// 考虑stop为true，但正在sleep的情况。
+    }
+}
+```
+
+
 
 
 
@@ -873,4 +931,82 @@ class ParkUnpark {
     }
 }
 ```
+
+
+
+
+
+# 同步模式之犹豫模式
+
+## 定义
+
+Balking （犹豫）模式用在一个线程发现另一个线程或本线程已经做了某一件相同的事，那么本线程就无需再做了，直接结束返回
+
+> 对比一下保护性暂停模式：保护性暂停模式用在一个线程等待另一个线程的执行结果，当条件不满足时线程等待。
+
+
+
+## 实现
+
+```java
+public class BalkingTest {
+
+    public static void main(String[] args) throws InterruptedException {
+        StatusMonitor statusMonitor = new StatusMonitor();
+
+        statusMonitor.start();
+        statusMonitor.start();
+        statusMonitor.start();
+        Thread.sleep(5000);
+        statusMonitor.stop();
+    }
+}
+
+@Slf4j(topic = "c.monitor")
+class StatusMonitor {
+    private Thread monitor;
+    private volatile boolean stop;
+    private volatile boolean started;
+
+    public void start() {
+        if (!started) {
+
+            synchronized (this) {
+                if (started)
+                    return;
+
+                monitor = new Thread(() -> {
+                    while (true) {
+                        if (stop) {
+                            log.debug("线程被打断，将要退出");
+                            break;
+                        }
+
+                        try {
+                            Thread.sleep(2_000);
+                            log.debug("记录监控信息");
+                        } catch (InterruptedException e) {
+
+                            stop = true;
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                monitor.start();
+
+                started = true;
+            }
+        }
+        
+        // 若已启动过，则直接返回。即Balking
+    }
+
+    public void stop() {
+        stop = true;
+        monitor.interrupt();
+    }
+}
+```
+
+
 
