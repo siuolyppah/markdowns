@@ -2919,4 +2919,151 @@ props选项的功能：***让组件接收外部（使用者）传递的数据***
 
 ## mixin混入
 
-[尚硅谷Vue2.0+Vue3.0全套教程丨vuejs从入门到精通_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1Zy4y1K7SH?p=67&spm_id_from=pageDriver)
+混入的作用：将多个组件公用的配置项抽取为对象，***简化配置对象的编写***。
+
+> 混入的优先级较低，重复的配置项，以配置对象为准。
+>
+> ***但特殊的，生命周期钩子将全部保留***。
+
+使用方式：
+
+1. 定义混合：
+   1. 定义一个配置对象。（只有是VM和VC的配置项都可以定义）
+   2. 将其通过ES6的模块化语法进行对外暴露。
+2. 使用混合：
+   - 全局混入：Vue.mixin(xxx)
+   - 局部混入：mixins:[xxx] （即配置对象的mixins选项）
+
+
+
+例如：
+
+- mymixin.js：
+
+  ```js
+  export const hunhe = {
+      methods:{
+          showname(){
+              alert(this.name)
+          }
+      }
+  }
+  
+  ```
+
+- School.vue（采用***局部混合***）：
+
+  ```vue
+  <template>
+    <div>
+        <h2 @click="showname">学校姓名：{{name}}</h2>
+    </div>
+  </template>
+  
+  <script>
+  import {hunhe} from '../mymixin.js'
+  
+  export default {
+      name:"School",
+      data(){
+          return {
+              name:"尚硅谷",
+          }
+      },
+      mixins:[hunhe]
+  }
+  </script>
+  ```
+
+- Student.vue（采用***局部混合***）：
+
+  ```vue
+  <template>
+    <div>
+      <h2 @click="showname">学生姓名：{{ name }}</h2>
+      <h2>学生性别：{{ sex }}</h2>
+    </div>
+  </template>
+  
+  <script>
+  import { hunhe } from "../mymixin.js";
+  
+  export default {
+    name: "Student",
+    data() {
+      return {
+        name: "小明",
+        sex: "男",
+      };
+    },
+    mixins: [hunhe],
+  };
+  </script>
+  ```
+
+
+
+存在***全局混合***的做法（所有的VM实例和VC实例，都将混合该配置项）：
+
+main.js：
+
+```js
+import {hunhe} from "./mymixin.js"
+Vue.mixin(hunhe)
+```
+
+
+
+## 插件
+
+- 功能：用于增强Vue
+
+- 本质：一个包含install方法的对象。
+
+  install()方法的第一个参数是Vue的原型对象，第二个以后的参数是插件使用者传递的参数。
+
+
+
+使用步骤：
+
+1. 定义插件：
+
+   ```js
+   // plugins.js
+   
+   export default{
+       install(VuePrototype){   // Vue的原型构造函数
+           // 定义全局过滤器
+           // 定义全局自定义指令
+           // 定义全局混入
+   
+           // 给Vue原型添加一个方法
+           VuePrototype.prototype.hello = ()=>{alert("hello")}
+       }
+   }
+   ```
+
+2. 使用插件（在创建VM实例之前）：
+
+   ```js
+   // main.js
+   
+   import Vue from 'vue'
+   import App from './App.vue'
+   
+   Vue.config.productionTip = false
+   
+   // 在创建VM实例之前
+   import plugins from './plugins'
+   Vue.use(plugins)		// 使用插件
+   
+   new Vue({
+     render: h => h(App),
+   }).$mount('#app')
+   ```
+
+   
+
+## scoped样式
+
+[尚硅谷Vue2.0+Vue3.0全套教程丨vuejs从入门到精通_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1Zy4y1K7SH?p=69&spm_id_from=pageDriver)
