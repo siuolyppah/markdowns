@@ -1,4 +1,4 @@
-# 相关资料
+# 、相关资料
 
 - [视频链接](https://www.bilibili.com/video/BV1ov41187bq)
 - [Nginx官网](http://nginx.org/)
@@ -120,7 +120,12 @@ Nginx的核心文件：
 
 
 
-# Nginx环境准备
+# Nginx安装
+
+>- Nginx源码在：/root/nginx/core/nginx-1.16.1
+>- Nginx已安装在：/usr/local/nginx/
+
+
 
 ## 版本介绍
 
@@ -173,6 +178,368 @@ Nginx的核心文件：
 
 
 
-## Nginx安装
+## 源码安装与yum安装
 
-[黑马程序员Nginx教程，Java进阶从0到1学会Nginx分布式框架_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1ov41187bq?p=8&spm_id_from=pageDriver)
+Nginx的安装方式可分为两种：
+
+1. 通过Nginx源码安装
+   - 通过Nginx源码的简单安装
+   - 通过Nginx源码的复杂安装
+2. 通过yum源安装
+
+
+
+### 准备安装环境
+
+通过源码安装，需要准备的环境：
+
+1. GCC编译器
+
+   - Nginx是使用C语言编写的程序，因此想要运行Nginx就需要安装一个编译工具。GCC就是一个开源的编译器集合，用于处理各种各样的语言，其中就包含了C语言。
+   - 使用命令`yum install -y gcc`来安装
+   - 安装成功后，可以通过`gcc --version`来查看gcc是否安装成功
+
+2. PCRE
+
+   - Nginx在编译过程中需要使用到PCRE库（perl Compatible Regular Expressoin 兼容正则表达式库)，因为在Nginx的Rewrite模块和http核心模块都会使用到PCRE正则表达式语法。
+
+   - 可以使用命令`yum install -y pcre pcre-devel`来进行安装
+   - 安装成功后，可以通过`rpm -qa pcre pcre-devel`来查看是否安装成功
+
+3. zlib
+
+   - zlib库提供了开发人员的压缩算法，在Nginx的各个模块中需要使用gzip压缩，所以我们也需要提前安装其库及源代码zlib和zlib-devel
+   - 可以使用命令`yum install -y zlib zlib-devel`来进行安装
+   - 安装成功后，可以通过`rpm -qa zlib zlib-devel`来查看是否安装成功
+
+4. OpenSSL
+
+   - OpenSSL是一个开放源代码的软件库包，应用程序可以使用这个包进行安全通信，并且避免被窃听。
+   - SSL:Secure Sockets Layer安全套接协议的缩写，可以在Internet上提供秘密性传输，其目标是保证两个应用间通信的保密性和可靠性。在Nginx中，如果服务器需要提供安全网页时就需要用到OpenSSL库，所以我们需要对OpenSSL的库文件及它的开发安装包进行一个安装。
+
+   - 可以使用命令`yum install -y openssl openssl-devel`来进行安装
+
+   - 安装成功后，可以通过`rpm -qa openssl openssl-devel`来查看是否安装成功
+
+>上述命令，一个个来的话比较麻烦，我们也可以通过一条命令来进行安装
+>
+>`yum install -y gcc pcre pcre-devel zlib zlib-devel openssl openssl-devel`进行全部安装。
+
+
+
+### 通过源码简单安装
+
+1. 进入官网查找需要下载版本（1.16.1）的[链接地址](http://nginx.org/en/download.html)，然后使用wget命令进行下载
+
+   ```sh
+   wget http://nginx.org/download/nginx-1.16.1.tar.gz
+   ```
+
+2. 将下载的资源进行包管理
+
+   ```sh
+   mkdir -p nginx/core
+   mv nginx-1.16.1.tar.gz nginx/core
+   ```
+
+3. 解压缩
+
+   ```sh
+   tar -xzf nginx-1.16.1.tar.gz
+   ```
+
+4. 进入资源文件中，执行configure文件
+
+   ```sh
+   ./configure
+   ```
+
+5. 编译
+
+   ```sh
+   make
+   ```
+
+6. 安装
+
+   ```sh
+   make install
+   ```
+
+> 默认安装到：/usr/local/nginx/
+
+
+
+### 关于源码的目录说明
+
+执行`tar -zxvf nginx-1.16.1.tar.gz`对下载的资源进行解压缩，进入压缩后的目录，可以看到如下结构：
+
+![image-20220519160850837](Nginx%E5%9F%BA%E7%A1%80.assets/image-20220519160850837.png)
+
+- auto:存放的是编译相关的脚本
+
+- CHANGES:版本变更记录
+
+- CHANGES.ru:俄语的版本变更记录
+
+- conf:nginx默认的配置文件
+
+- configure:nginx软件的自动脚本程序,是一个比较重要的文件，作用如下：
+
+  1. 检测环境及根据环境检测结果生成C代码
+  2. 生成编译代码需要的Makefile文件
+
+- contrib:存放的是几个特殊的脚本文件，其中README中对脚本有着详细的说明
+
+- html:存放的是Nginx自带的两个html页面，访问Nginx的首页和错误页面
+
+- LICENSE:许可证的相关描述文件
+
+- man:nginx的man手册
+
+- README:Nginx的阅读指南
+
+- src:Nginx的源代码
+
+  
+
+### 通过yum安装
+
+使用源码进行简单安装，我们会发现安装的过程比较繁琐，需要提前准备GCC编译器、PCRE兼容正则表达式库、zlib压缩库、OpenSSL安全通信的软件库包，然后才能进行Nginx的安装。
+
+
+
+1. 安装yum-utils
+
+   ```sh
+   sudo yum  install -y yum-utils
+   ```
+
+2. 添加yum源文件
+
+   ```sh
+   vim /etc/yum.repos.d/nginx.repo
+   ```
+
+   ```
+   [nginx-stable]
+   name=nginx stable repo
+   baseurl=http://nginx.org/packages/centos/$releasever/$basearch/
+   gpgcheck=1
+   enabled=1
+   gpgkey=https://nginx.org/keys/nginx_signing.key
+   module_hotfixes=true
+   
+   [nginx-mainline]
+   name=nginx mainline repo
+   baseurl=http://nginx.org/packages/mainline/centos/$releasever/$basearch/
+   gpgcheck=1
+   enabled=0
+   gpgkey=https://nginx.org/keys/nginx_signing.key
+   module_hotfixes=true
+   ```
+
+3. 查看是否安装成功
+
+   ```sh
+   yum list | grep nginx
+   ```
+
+4. 使用yum进行安装
+
+   ```sh
+   yun install -y nginx
+   ```
+
+5. 查看nginx的安装位置
+
+   ```sh
+   whereis nginx
+   ```
+
+6. 启动测试
+
+
+
+### 简单安装与yun安装的区别
+
+这里先介绍一个命令: `./nginx -V`,通过该命令可以查看到所安装Nginx的版本及相关配置信息。
+
+- 简单安装：
+
+  ![image-20220519155620822](Nginx%E5%9F%BA%E7%A1%80.assets/image-20220519155620822.png)
+
+- yum安装：
+
+  ![image-20220519155626145](Nginx%E5%9F%BA%E7%A1%80.assets/image-20220519155626145.png)
+
+
+
+### 通过源码的复杂安装
+
+与简单安装的不同之处在于，通过`./configure`来对编译参数进行设置。
+
+查看所有可选的配置项：
+
+```sh
+./configure --help
+```
+
+
+
+可简单分为：
+
+- PATH相关
+- --with开头：用于配置启用模块
+- --without开头：用于配置关闭模块
+
+
+
+常见的配置：
+
+- --prefix=PATH
+
+  ```
+  指向Nginx的安装目录，默认值为/usr/local/nginx   
+  ```
+
+- --sbin-path=PATH
+
+  ```
+  指向可执行程序文件(nginx)的路径,默认值为<prefix>/sbin/nginx
+  ```
+
+- --modules-path=PATH
+
+  ```
+  指向Nginx动态模块安装目录，默认值为<prefix>/modules
+  ```
+
+- --conf-path=PATH
+
+  ```
+  指向配置文件(nginx.conf)的路径,默认值为<prefix>/conf/nginx.conf
+  ```
+
+- --error-log-path=PATH 
+
+  ```
+  指向错误日志文件的路径,默认值为<prefix>/logs/error.log
+  ```
+
+- --http-log-path=PATH  
+
+  ```
+  指向访问日志文件的路径,默认值为<prefix>/logs/access.log
+  ```
+
+- --pid-path=PATH
+
+  ```
+  指向记录Nginx启动后进程ID的文件路径，默认值为<prefix>/logs/nginx.pid
+  ```
+
+- --lock-path=PATH
+
+  ```
+  指向Nginx锁文件的存放路径,默认值为<prefix>/logs/nginx.lock
+  ```
+
+
+
+要想使用可以通过如下命令
+
+```
+./configure --prefix=/usr/local/nginx \
+--sbin-path=/usr/local/nginx/sbin/nginx \
+--modules-path=/usr/local/nginx/modules \
+--conf-path=/usr/local/nginx/conf/nginx.conf \
+--error-log-path=/usr/local/nginx/logs/error.log \
+--http-log-path=/usr/local/nginx/logs/access.log \
+--pid-path=/usr/local/nginx/logs/nginx.pid \
+--lock-path=/usr/local/nginx/logs/nginx.lock
+```
+
+
+
+> 关于卸载已安装的Nginx：
+>
+> 1. 将nginx的进程关闭
+>
+>    `./nginx -s stop`
+>
+> 2. 将安装的nginx进行删除
+>
+>    `rm -rf /usr/local/nginx`
+>
+> 3. 将安装包之前编译的环境清除掉
+>
+>    `make clean`
+
+
+
+# Nginx的目录结构
+
+- 安装tree工具：
+
+  ```sh
+  yum install -y tree
+  ```
+
+- 使用tree命令：
+
+  ```sh
+  tree /usr/local/nginx
+  ```
+
+  ```
+  /usr/local/nginx
+  ├── client_body_temp
+  ├── conf
+  │   ├── fastcgi.conf
+  │   ├── fastcgi.conf.default
+  │   ├── fastcgi_params
+  │   ├── fastcgi_params.default
+  │   ├── koi-utf
+  │   ├── koi-win
+  │   ├── mime.types
+  │   ├── mime.types.default
+  │   ├── nginx.conf
+  │   ├── nginx.conf.default
+  │   ├── scgi_params
+  │   ├── scgi_params.default
+  │   ├── uwsgi_params
+  │   ├── uwsgi_params.default
+  │   └── win-utf
+  ├── fastcgi_temp
+  ├── html
+  │   ├── 50x.html
+  │   └── index.html
+  ├── logs
+  │   ├── access.log
+  │   ├── error.log
+  │   └── nginx.pid
+  ├── proxy_temp
+  ├── sbin
+  │   └── nginx
+  ├── scgi_temp
+  └── uwsgi_temp
+  ```
+
+
+
+>  CGI(Common Gateway Interface)通用网关【接口】：
+>
+>  主要解决的问题是从客户端发送一个请求和数据，服务端获取到请求和数据后可以调用调用CGI【程序】处理及相应结果给客户端的一种标准规范。
+
+
+
+- mime.types：记录HTTP协议中，Content-Type的值和文件后缀名的对应关系
+- nginx.conf：Nginx的核心配置文件
+- koi-utf、koi-win、win-utf：这三个文件都是与编码转换映射相关的配置文件，用来将一种编码转换成另一种编码
+
+
+
+# Nginx服务器的启停命令
+
+[黑马程序员Nginx教程，Java进阶从0到1学会Nginx分布式框架_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1ov41187bq?p=15&spm_id_from=pageDriver)
