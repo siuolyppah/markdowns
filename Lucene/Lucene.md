@@ -249,6 +249,123 @@ public class TestSearch {
 
 
 
-# Field域
+# Field
 
-[黑马程序员Lucene全文检索技术，从底层到实战应用Lucene全套教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1eJ411q7nw?p=16&spm_id_from=pageDriver)
+## Field属性
+
+Field是文档中的域，包括Field名和Field值两部分，一个文档可以包括多个Field，Document只是Field 的一个承载体，Field值即为要索引的内容，也是要搜索的内容。
+
+- 是否分词(tokenized)
+
+  - 是：作分词处理，即将Field值进行分词，分词的目的是为了索引。
+
+    比如：商品名称、商品描述等，这些内容用户要输入关键字搜索，由于搜索的内容格式大、内容多需要分词后将语汇单元建立索引
+
+  - 否：不作分词处理
+
+    比如：商品id、订单号、身份证号等
+
+- 是否索引(indexed)
+
+  - 是：进行索引。将Field分词后的词或整个Field值进行索引，存储到索引域，索引的目的是为了搜索。
+
+    比如：商品名称、商品描述分析后进行索引，订单号、身份证号不用分词但也要索引，这些将来都要作 为查询条件。
+
+  - 否：不索引。
+
+    比如：图片路径、文件路径等，不用作为查询条件的不用索引。
+
+- 是否存储(stored)
+
+  - 是：将Field值存储在文档域中，存储在文档域中的Field才可以从Document中获取。
+
+    比如：商品名称、订单号，凡是将来要从Document中获取的Field都要存储。
+
+  - 否：不存储Field值
+
+    比如：商品描述，内容较大不用存储。如果要向用户展示商品描述可以从系统的关系数据库中获取。
+
+
+
+## Field常用类型
+
+| Filed类型                                                    | 数据类型                  | 是否分词(tokenized) | 是否索引(indexed) | 是否存储(stored) | 说明                                                         |
+| ------------------------------------------------------------ | ------------------------- | ------------------- | ----------------- | ---------------- | ------------------------------------------------------------ |
+| StringField(FieldName, FieldValue,Store.YES))                | 字符串                    | N                   | Y                 | Y或N             | 这个Field用来构 建一个字符串 Field，但是不会 进行分词，会将 整个串存储在索 引中，比如(订单 号,身份证号等) 是否存储在文档 中用Store.YES或 Store.NO决定 |
+| FloatPoint(FieldName, FieldValue)                            | Float型                   | Y                   | Y                 | N                | 这个Field用来构 建一个Float数字 型Field，进行分 词和索引，不存 储, 比如(价格) 存 储在文档中 |
+| DoublePoint(FieldName, FieldValue)                           | Double 型                 | Y                   | Y                 | N                | 这个Field用来构 建一个Double数 字型Field，进行 分词和索引，不 存储 |
+| LongPoint(FieldName, FieldValue)                             | Long型                    | Y                   | Y                 | N                | 这个Field用来构 建一个Long数字 型Field，进行分 词和索引，不存 储 |
+| IntPoint(FieldName, FieldValue)                              | Integer 型                | Y                   | Y                 | N                | 这个Field用来构 建一个Integer数 字型Field，进行 分词和索引，不 存储 |
+| StoredField(FieldName, FieldValue)                           | 重载方 法，支 持多种 类型 | N                   | N                 | Y                | 这个Field用来构 建不同类型Field 不分析，不索 引，但要Field存 储在文档中 |
+| TextField(FieldName, FieldValue, Store.NO) 或 TextField(FieldName, reader) | 字符串 或 流              | Y                   | Y                 | Y或N             | 如果是一个 Reader, lucene 猜测内容比较多, 会采用Unstored 的策略. |
+| NumericDocValuesField(FieldName, FieldValue)                 | 数值                      | -                   | -                 | -                | 配合其他域排序 使用                                          |
+
+
+
+# 维护索引库
+
+## 创建索引
+
+调用 indexWriter.addDocument（doc）添加索引。
+
+
+
+## 修改索引
+
+更新索引是先删除再添加：
+
+- 先查询，若存在则进行更新
+- 若不存在则新增
+
+```java
+@Test
+public void testIndexUpdate() throws Exception {
+    // 创建分词器
+    Analyzer analyzer = new StandardAnalyzer();
+    // 创建Directory流对象
+    Directory directory = FSDirectory.open(Paths.get("E:\\dir"));
+    // 创建IndexWriteConfig对象，写入索引需要的配置
+    IndexWriterConfig config = new IndexWriterConfig(analyzer);
+    // 创建写入对象
+    IndexWriter indexWriter = new IndexWriter(directory, config);
+    // 创建Document
+    Document document = new Document();
+    document.add(new TextField("id", "1202790956", Field.Store.YES));
+    document.add(new TextField("name", "lucene测试test 002", Field.Store.YES));
+    // 执行更新，会把所有符合条件的Document删除，再新增。
+    indexWriter.updateDocument(new Term("id", "1202790956"), document);
+    indexWriter.close();
+}
+```
+
+
+
+## 删除索引
+
+根据Term项删除索引，满足条件的将全部删除。
+
+```java
+@Test
+public void testIndexDelete() throws Exception {
+    // 创建分词器
+    Analyzer analyzer = new StandardAnalyzer();
+    // 创建Directory流对象
+    Directory directory = FSDirectory.open(Paths.get("E:\\dir"));
+    // 创建IndexWriteConfig对象，写入索引需要的配置
+    IndexWriterConfig config = new IndexWriterConfig(analyzer);
+    // 创建写入对象
+    IndexWriter indexWriter = new IndexWriter(directory, config);
+    // 根据Term删除索引库，name:java
+    indexWriter.deleteDocuments(new Term("id", "998188"));
+    // 释放资源
+    indexWriter.close();
+}
+```
+
+> 执行删除索引后，索引域没有变化。文档域数据被删除掉
+
+
+
+# 分词器
+
+[黑马程序员Lucene全文检索技术，从底层到实战应用Lucene全套教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1eJ411q7nw?p=18)
