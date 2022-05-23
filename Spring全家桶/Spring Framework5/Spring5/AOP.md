@@ -57,7 +57,7 @@
 
 - aop Proxy：代理对象，即增强后产生的新对象。
 
-  
+  ![image-20220523172727774](AOP.assets/image-20220523172727774.png)
 
 Spring AOP的底层实现：
 
