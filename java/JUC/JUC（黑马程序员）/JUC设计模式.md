@@ -1010,3 +1010,131 @@ class StatusMonitor {
 
 
 
+# 享元模式
+
+## 定义
+
+Flyweight pattern，用于**重用数量有限的同一类对象**，最小化内存的使用。
+
+
+
+## JDK中的体现
+
+在JDK中 Boolean，Byte，Short，Integer，Long，Character 等包装类提供了 valueOf 方法，例如 Long 的 valueOf 会缓存 -128~127 之间的 Long 对象，在这个范围之间会重用对象，大于这个范围，才会新建 Long 对 象：
+
+```java
+public static Long valueOf(long l) {
+    final int offset = 128;
+    if (l >= -128 && l <= 127) { // will cache
+        return LongCache.cache[(int)l + offset];
+    }
+    return new Long(l);
+}
+```
+
+>注意： 
+>
+>- Byte, Short, Long 缓存的范围都是 -128~127
+>
+>- Character 缓存的范围是 0~127
+>
+>- Integer的默认范围是 -128~127 
+>
+>  - 最小值不能变 
+>
+>  - 但最大值可以通过调整虚拟机参数:
+>
+>     `  -Djava.lang.Integer.IntegerCache.high` 来改变 
+>
+>- Boolean 缓存了 TRUE 和 FALSE
+
+
+
+类似的案例，还有：
+
+1. String 串池
+2. BigDecimal、BigInteger等
+
+
+
+## 案例——数据库连接池
+
+```java
+@Slf4j(topic = "c.Pool")
+public class Pool {
+    private final int poolSize;
+    private Connection[] connections;
+    private AtomicIntegerArray status;
+
+    public Pool(int poolSize) {
+        this.poolSize = poolSize;
+        this.connections = new Connection[poolSize];
+        this.status = new AtomicIntegerArray(new int[poolSize]);
+
+        for (int i = 0; i < poolSize; i++) {
+            connections[i] = new MockConnection();
+        }
+    }
+
+    public Connection borrow() {
+        while (true) {
+            for (int i = 0; i < poolSize; i++) {
+                if (status.get(i) == 0) {
+                    if (status.compareAndSet(i, 0, 1)) {
+
+                        log.debug("获取连接：{}", i);
+                        return connections[i];
+                    }
+                }
+            }
+
+            // 当前无空闲连接
+            synchronized (this) {
+                try {
+                    log.debug("当前无空闲连接，进入阻塞等待");
+                    this.wait();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+    }
+
+    public void freeConnection(Connection conn) {
+        for (int i = 0; i < poolSize; i++) {
+            if (conn == connections[i]) {
+                status.set(i, 0);   // 连接持有者只会同时有一个，可以不用CAS操作
+
+                log.debug("归还连接：{}", i);
+                synchronized (this) {
+                    this.notifyAll();
+                }
+
+                break;
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        Pool pool = new Pool(2);
+
+        for (int i = 0; i < 5; i++) {
+            new Thread(() -> {
+                Connection connection = pool.borrow();
+
+                try {
+                    Thread.sleep(new Random().nextInt(1000));
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                pool.freeConnection(connection);
+            }).start();
+        }
+    }
+}
+
+class MockConnection implements Connection {
+    ...（空
+}
+```
+
