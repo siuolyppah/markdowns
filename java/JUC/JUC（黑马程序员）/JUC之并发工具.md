@@ -245,9 +245,41 @@
 
    
 
-## ThreadPoolExecutor
+## JDK线程池
 
-[黑马程序员全面深入学习Java并发编程，JUC并发编程全套教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV16J411h7Rd?p=209)
+### ThreadPoolExecutor
+
+![image-20220605220843079](JUC%E4%B9%8B%E5%B9%B6%E5%8F%91%E5%B7%A5%E5%85%B7.assets/image-20220605220843079.png)
+
+
+
+#### 线程池状态
+
+ThreadPoolExecutor使用int的**高3位来表示线程池状态**，**低29位表示线程数量**。
+
+| 状态名     | 高3位 | 接收新任务 | 处理阻塞队列任务 | 说明                                      |
+| ---------- | ----- | ---------- | ---------------- | ----------------------------------------- |
+| RUNNING    | 111   | Y          | Y                |                                           |
+| SHUTDOWN   | 000   | N          | Y                | 不会接收新任务，但会处理阻塞队列剩余任务  |
+| STOP       | 001   | N          | N                | 会中断正在执行的任务，并抛弃阻塞队列任务  |
+| TIDYING    | 010   | -          | -                | 任务全执行完毕，活动线程为0，即将进入终结 |
+| TERMINATED | 011   | -          | -                | 终结状态                                  |
+
+这些信息存储在一个原子变量 ctl 中，目的是将线程池状态与线程个数合二为一，这样就可以用一次 cas 原子操作进行赋值。
+
+```java
+// c 为旧值， ctlOf 返回结果为新值
+ctl.compareAndSet(c, ctlOf(targetState, workerCountOf(c))));
+
+// rs 为高 3 位代表线程池状态， wc 为低 29 位代表线程个数，ctl 是合并它们
+private static int ctlOf(int rs, int wc) { return rs | wc; }
+```
+
+
+
+#### 构造方法
+
+[黑马程序员全面深入学习Java并发编程，JUC并发编程全套教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV16J411h7Rd?p=210&spm_id_from=pageDriver)
 
 
 
