@@ -1,3 +1,23 @@
+# 技巧
+
+## 单行文字的垂直居中
+
+- 解决方案：
+
+  **让文字的行高，等于盒子的高度**。
+
+  > - 如果 行高 > 盒子高度：文字偏下
+  >
+  > - 如果 行高 < 盒子高度：文字偏下
+
+
+
+
+
+
+
+
+
 # CSS语法规范
 
 CSS规则由两个主要的组成部分：
@@ -577,3 +597,245 @@ p {
 - 转换为块元素：`display:block;` 
 - 转换为行内元素：`display:inline;`
 - 转换为行内块元素：`display:inline-block;`
+
+
+
+# 背景属性
+
+可以设置：
+
+- 背景颜色
+- 背景图片
+- 背景平铺
+- 背景图片位置
+- 背景图像固定等
+
+
+
+## 背景颜色
+
+`background-color`，取值：
+
+- transparent：透明
+
+- *color*：具体的颜色
+
+  > CSS3提供了背景颜色半透明的效果，如：
+  >
+  > `background-color: rgba(0,0,0,0.3)`
+
+
+
+## 背景图片
+
+`background-image`，取值：
+
+- none
+- *url*
+
+
+
+```css
+div {
+	width: 300px;
+    height: 300px;
+    background-image: url("./logo.png");
+}
+```
+
+> 页面元素，既可以添加背景图片，也可以添加背景颜色。
+>
+> 背景颜色会在图片底下。
+
+
+
+### 背景平铺
+
+如果需要在HTML页面上，对背景图片进行平铺，可以设置`background-repeat`属性。取值：
+
+- no-repeat
+- repeat（默认）
+- repeat-x
+- repeat-y
+
+
+
+### 背景图片位置
+
+利用`background-position`属性，可以改变图片在背景中的位置。
+
+```css
+background-position: x y;
+```
+
+参数x和y，可以使用 **方位名词** 或 **精确单位**。
+
+取值：
+
+- position：top | center | bottom | left | center | right
+
+  ```css
+  div {
+      background-image: url(...);
+      background-repeat: no-repeat;
+      background-position: center top; <!--或 top center-->
+  }
+  ```
+
+  > 如果只指定了一个方位名词，则默认第二个方位名词为居中
+
+- length：百分数 | 由浮点数和单位标识符组成的长度值
+
+  ```css
+  div {
+      background-image: url(...);
+      background-repeat: no-repeat;
+      background-position: 20px 50px; <!--或 top center-->
+  }
+  ```
+
+  > 如果只指定了一个数值，则该数组为x坐标。y坐标垂直居中。
+
+> 也可以混合使用方位名词和精确单位，但第一个必是x坐标，第二个必为y坐标。
+
+
+
+### 背景附着
+
+`background-attachment`属性，用于设置背景图像是否固定 或 随着页面的其余部分滚动。取值：
+
+- scroll
+- fixed
+
+
+
+## 背景属性的复合写法
+
+```css
+background:背景颜色 背景图片地址 背景平铺 背景图像滚动 背景图片位置
+```
+
+> 背景属性的次序，没有规定。但一般按如上的默认约定。
+
+
+
+# CSS的三大特性
+
+## 层叠性
+
+相同的选择器，设置了同一属性的不同值，此时一个样式会覆盖（层叠）另一个样式。
+
+层叠规则为：
+
+- 同一属性的不同值：选择离HTML元素“**最近**”的样式。
+
+  - 案例1：
+
+    ```html
+    <style>
+        .red {
+            color:red;
+        }
+        
+        .pink {
+            color:pink;
+        }
+    </style>
+    
+    <div class="red pink">
+        最终会是粉色
+    </div>
+    ```
+
+  - 案例2：
+
+    ```html
+    <style>
+        .red {
+            color:red;
+        }
+    </style>
+    
+    <div class="red" style="color:pink;">
+        最终会是粉色
+    </div>
+    ```
+
+- 不同属性：共同起作用。
+
+
+
+## 继承性
+
+子标签，会继承父标签的某些样式，如文本颜色和字号。
+
+> 继承的样式：
+>
+> 如`text-`，`font-`，`line-`，`color`属性
+
+
+
+特别的，行高的特别写法：
+
+```css
+body{
+    /* font:12px/18px; 直接指定行高为18px */
+    /* 也可将其指定为字号的1.5倍 */
+    font: 12px/1.5;
+}
+
+p{
+    font-size:16px;
+    /* 此时p标签继承body，其行高为字号的1.5倍。但此时字号为16px */
+}
+```
+
+
+
+## 优先级
+
+当同一个元素，被多个选择器选中，则存在优先级：
+
+1. 选择器类型相同，则执行层叠性。
+
+2. 选择器类型不同，则根据 **选择器权重** 执行。
+
+   | 选择器               | 选择器权重 |
+   | -------------------- | ---------- |
+   | **继承** 或 *        | 0,0,0,0    |
+   | 元素选择器           | 0,0,0,1    |
+   | 类选择器，伪类选择器 | 0,0,1,0    |
+   | ID选择器             | 0,1,0,0    |
+   | 行内样式 style=""    | 1,0,0,0    |
+   | !important           | ∞          |
+
+   > 复合选择器的权重，需要叠加计算：
+   >
+   > ```css
+   > /* 权重为0,0,0,2 */
+   > ul li {
+   >     color: green; 
+   > }
+   > 
+   > /* 权重为0,0,0,1 */
+   > li{
+   >     color: red;
+   > }
+   > ```
+   >
+   > > ***永远不用考虑进位***。
+
+
+
+## 总结
+
+当发生样式的冲突时，哪个样式将最终生效，需要：
+
+1. **先看选择器的类型**，权重最高的选择器生效
+2. **若选择器的类型相同**，按照层叠性规则（最近优先规则）
+
+
+
+# 盒子模型
+
+[黑马程序员pink老师前端入门教程，零基础必看的h5(html5)+css3+移动端前端视频教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV14J4114768?p=136)
