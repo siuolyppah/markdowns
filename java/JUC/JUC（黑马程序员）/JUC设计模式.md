@@ -1138,3 +1138,98 @@ class MockConnection implements Connection {
 }
 ```
 
+
+
+# 异步模式之工作线程
+
+## 定义
+
+让有限的工作线程（Worker Thread）来轮流异步处理无限多的任务。也可以将其归类为<u>**分工模式**</u>，它的典型实现 就是线程池，也体现了经典设计模式中的<u>**享元模式**</u>。
+
+> 注意：不同任务类型，应该使用不同的线程池，以避免饥饿。
+
+
+
+## 饥饿
+
+> 此处的饥饿现象，是由于**线程数目不足**而引起的。
+>
+> #### 💡 固定大小线程池会有饥饿现象
+
+
+
+两个工人是同一个线程池中的两个线程：
+
+- 他们要做的事情是：为客人点餐和到后厨做菜，这是两个阶段的工作：
+  - 客人点餐：必须先点完餐，等菜做好，上菜，在此期间处理点餐的工人**必须等待**
+  - 后厨做菜
+- 比如工人A 处理了点餐任务，接下来它要等着 工人B 把菜做好，然后上菜，他俩也配合的蛮好
+- 但现在同时来了两个客人，这个时候工人A 和工人B 都去处理点餐了，这时没人做饭了，**产生饥饿**
+
+```java
+public class TestDeadLock {
+    static final List<String> MENU = Arrays.asList("地三鲜", "宫保鸡丁", "辣子鸡丁", "烤鸡翅");
+    static Random RANDOM = new Random();
+    static String cooking() {
+        return MENU.get(RANDOM.nextInt(MENU.size()));
+    }
+    public static void main(String[] args) {
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        executorService.execute(() -> {
+            log.debug("处理点餐...");
+            Future<String> f = executorService.submit(() -> {
+                log.debug("做菜");
+                return cooking();
+            });
+            try {
+                log.debug("上菜: {}", f.get());
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        });
+
+        // 若再提交一个此任务，则会因线程数不够而导致饥饿
+        executorService.execute(() -> {
+            log.debug("处理点餐...");
+            Future<String> f = executorService.submit(() -> {
+                log.debug("做菜");
+                return cooking();
+            });
+            try {
+                log.debug("上菜: {}", f.get());
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+}
+```
+
+> 解决方案：将不同任务，提交到不同的线程池
+
+
+
+## 创建多少线程比较合适
+
+-  过少：程序不能充分的利用系统资源
+- 过多：导致更多的上下文切换；占用更多内存
+
+
+
+结论：
+
+- CPU密集型任务：
+
+  通常采用 cpu 核数 + 1 能够实现最优的 CPU 利用率
+
+  > +1 是保证当线程由于页缺失故障（操作系统）或其它原因导致暂停时，额外的这个线程就能顶上去，保证 CPU 时钟周期不被浪费
+
+- I/O 密集型任务：
+
+  CPU 不总是处于繁忙状态，例如，当你执行业务计算时，这时候会使用 CPU 资源，但当你执行 I/O 操作时、远程 RPC 调用时，包括进行数据库操作时，这时候 CPU 就闲下来了，你可以利用多线程提高它的利用率。
+
+  经验公式如下：
+
+  `线程数 = 核数 * 期望 CPU 利用率 * 总时间(CPU计算时间+等待时间) / CPU 计算时间`
+
+  例如 4 核 CPU 计算时间是 50% ，其它等待时间是 50%，期望 cpu 被 100% 利用，套用公式 4 * 100% * 100% / 50% = 8

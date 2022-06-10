@@ -585,15 +585,278 @@ void execute(Runnable command);
 
 #### 设计模式——工作线程
 
-[黑马程序员全面深入学习Java并发编程，JUC并发编程全套教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV16J411h7Rd?p=220&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+见设计模式（异步模式之工作线程）
+
+
+
+
+
+#### 任务调度线程池-Timer
+
+在『任务调度线程池』功能加入之前，可以使用 java.util.Timer 来实现定时功能，Timer 的优点在于简单易用，但由于所有任务都是由同一个线程来调度，因此所有任务都是串行执行的，同一时间只能有一个任务在执行，前一个任务的延迟或异常都将会影响到之后的任务。
+
+```java
+public static void main(String[] args) {
+    Timer timer = new Timer();
+    TimerTask task1 = new TimerTask() {
+        @Override
+        public void run() {
+            log.debug("task 1");
+            sleep(2); }
+    };
+    TimerTask task2 = new TimerTask() {
+        @Override
+        public void run() {
+            log.debug("task 2");
+        }
+    };
+    // 使用 timer 添加两个任务，希望它们都在 1s 后执行
+    // 但由于 timer 内只有一个线程来顺序执行队列中的任务，因此『任务1』的延时，影响了『任务2』的执行
+    timer.schedule(task1, 1000);
+    timer.schedule(task2, 1000);
+}
+```
+
+```
+20:46:09.444 c.TestTimer [main] - start... 
+20:46:10.447 c.TestTimer [Timer-0] - task 1 
+20:46:12.448 c.TestTimer [Timer-0] - task 2 
+```
+
+
+
+#### 任务调度线程池-ScheduledExecutorService
+
+```java
+// 设置的是核心线程数
+public static ScheduledExecutorService newScheduledThreadPool(int corePoolSize) {
+    return new ScheduledThreadPoolExecutor(corePoolSize);
+}
+```
+
+
+
+##### 延时执行
+
+例如：
+```java
+@Slf4j(topic = "c.SchedulePoolTest")
+public class SchedulePoolTest {
+
+    public static void main(String[] args) {
+        ScheduledExecutorService pool = Executors.newScheduledThreadPool(2);
+
+        pool.schedule(()->{
+            log.debug("task1 running");
+        },2, TimeUnit.SECONDS);
+
+        pool.schedule(()->{
+            log.debug("task2 running");
+        },1, TimeUnit.SECONDS);
+    }
+}
+```
+
+
+
+##### 定时执行
+
+```java
+@Slf4j(topic = "c.SchedulePoolTest")
+public class SchedulePoolTest {
+
+    public static void main(String[] args) {
+        ScheduledExecutorService pool = Executors.newScheduledThreadPool(2);
+
+        log.debug("begin");
+        pool.scheduleAtFixedRate(()->{
+            log.debug("running");
+        },2,1,TimeUnit.SECONDS);	// 初始延迟2秒，之后每隔1秒执行一次该任务
+    }
+}
+```
+
+```
+20:16:17 [main] c.SchedulePoolTest - begin
+20:16:19 [pool-1-thread-1] c.SchedulePoolTest - running
+20:16:20 [pool-1-thread-1] c.SchedulePoolTest - running
+20:16:21 [pool-1-thread-1] c.SchedulePoolTest - running
+20:16:22 [pool-1-thread-1] c.SchedulePoolTest - running
+```
+
+
+
+如何让每周四 18:00:00 定时执行任务？
+
+```java
+// 获得当前时间
+LocalDateTime now = LocalDateTime.now();
+// 获取本周四 18:00:00.000
+LocalDateTime thursday = 
+    now.with(DayOfWeek.THURSDAY).withHour(18).withMinute(0).withSecond(0).withNano(0);
+
+// 如果当前时间已经超过 本周四 18:00:00.000， 那么找下周四 18:00:00.000
+if(now.compareTo(thursday) >= 0) {
+    thursday = thursday.plusWeeks(1);
+}
+// 计算时间差，即延时执行时间
+long initialDelay = Duration.between(now, thursday).toMillis();
+// 计算间隔时间，即 1 周的毫秒值
+long oneWeek = 7 * 24 * 3600 * 1000;
+ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
+
+System.out.println("开始时间：" + new Date());
+executor.scheduleAtFixedRate(() -> {
+    System.out.println("执行时间：" + new Date());
+}, initialDelay, oneWeek, TimeUnit.MILLISECONDS);
+```
+
+
+
+
+
+#### 正确处理任务中的异常
+
+- 方法1：主动捉异常
+
+  ```java
+  ExecutorService pool = Executors.newFixedThreadPool(1);
+  pool.submit(() -> {
+      try {
+          log.debug("task1");
+          int i = 1 / 0;
+      } catch (Exception e) {
+          log.error("error:", e);
+      }
+  });
+  ```
+
+- 方法2：使用 Future
+
+  ```java
+  ExecutorService pool = Executors.newFixedThreadPool(1);
+  Future<Boolean> f = pool.submit(() -> {
+      log.debug("task1");
+      int i = 1 / 0;
+      return true;
+  });
+  log.debug("result:{}", f.get());
+  ```
+
+
+
+## Tomcat线程池
+
+![image-20220610204705784](JUC%E4%B9%8B%E5%B9%B6%E5%8F%91%E5%B7%A5%E5%85%B7.assets/image-20220610204705784.png)
+
+- LimitLatch 用来限流，可以控制最大连接个数，类似 J.U.C 中的 Semaphore 后面再讲
+- Acceptor 只负责【接收新的 socket 连接】
+- Poller 只负责监听 socket channel 是否有【可读的 I/O 事件】
+- 一旦可读，封装一个任务对象（socketProcessor），提交给 Executor 线程池处理
+- Executor 线程池中的工作线程最终负责【处理请求】
+
+
+
+> Tomcat 线程池扩展了 ThreadPoolExecutor，行为稍有不同：
+>
+> 如果总线程数达到 maximumPoolSize：
+>
+> - 这时不会立刻抛 RejectedExecutionException 异常
+> - 而是再次尝试将任务放入队列，如果还失败，才抛出 RejectedExecutionException 异常
 
 
 
 ## Fork/Join
 
+### 概念
+
+Fork/Join 是 JDK 1.7 加入的新的线程池实现，它体现的是一种分治思想，**适用于能够进行任务拆分的 cpu 密集型运算**。
+
+所谓的任务拆分，是将一个大任务拆分为算法上相同的小任务，直至不能拆分可以直接求解。跟递归相关的一些计 算，如归并排序、斐波那契数列、都可以用分治思想进行求解
+
+Fork/Join 在分治的基础上加入了多线程，可以把每个任务的分解和合并交给不同的线程来完成，进一步提升了运算效率
+
+**Fork/Join 默认会创建与 cpu 核心数大小相同的线程池**
+
+
+
+### 使用
+
+提交给 Fork/Join 线程池的任务，需要继承 `RecursiveTask`（有返回值）或 `RecursiveAction`（没有返回值）
+
+例如下面定义了一个对 1~n 之间的整数求和的任务：
+
+```java
+@Slf4j(topic = "c.AddTask")
+class AddTask1 extends RecursiveTask<Integer> {
+    int n;
+    
+    public AddTask1(int n) {
+        this.n = n;
+    }
+    
+    @Override
+    public String toString() {
+        return "{" + n + '}';
+    }
+    
+    @Override
+    protected Integer compute() {
+        // 如果 n 已经为 1，可以求得结果了
+        if (n == 1) {
+            log.debug("join() {}", n);
+            return n;
+        }
+
+        // 将任务进行拆分(fork)，由一个线程执行
+        AddTask1 t1 = new AddTask1(n - 1);
+        t1.fork();
+        log.debug("fork() {} + {}", n, t1);
+
+        // 合并(join)结果
+        int result = n + t1.join();
+        log.debug("join() {} + {} = {}", n, t1, result);
+        return result;
+    }
+}
+```
+
+然后提交给 ForkJoinPool 来执行：
+```java
+public static void main(String[] args) {
+    ForkJoinPool pool = new ForkJoinPool(4);
+    System.out.println(pool.invoke(new AddTask1(5)));
+}
+```
+
+结果如下：
+
+```
+[ForkJoinPool-1-worker-0] - fork() 2 + {1} 
+[ForkJoinPool-1-worker-1] - fork() 5 + {4} 
+[ForkJoinPool-1-worker-0] - join() 1 
+[ForkJoinPool-1-worker-0] - join() 2 + {1} = 3 
+[ForkJoinPool-1-worker-2] - fork() 4 + {3} 
+[ForkJoinPool-1-worker-3] - fork() 3 + {2} 
+[ForkJoinPool-1-worker-3] - join() 3 + {2} = 6 
+[ForkJoinPool-1-worker-2] - join() 4 + {3} = 10 
+[ForkJoinPool-1-worker-1] - join() 5 + {4} = 15 
+15 
+```
+
+![image-20220610210804515](JUC%E4%B9%8B%E5%B9%B6%E5%8F%91%E5%B7%A5%E5%85%B7.assets/image-20220610210804515.png)
+
+
+
 
 
 # J.U.C并发工具类
+
+## AQS 原理
+
+[黑马程序员全面深入学习Java并发编程，JUC并发编程全套教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV16J411h7Rd?p=235&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+
+
 
 ## Lock
 
