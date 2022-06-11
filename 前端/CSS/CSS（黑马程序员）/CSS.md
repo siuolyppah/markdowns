@@ -1414,4 +1414,205 @@ CSS提供了三种传统布局方式（即盒子如何排列顺序）：
 
 
 
-https://www.bilibili.com/video/BV14J4114768?p=177&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3
+
+
+## 清除浮动
+
+为什么需要清除浮动：
+
+- 浮动元素，都应有一父元素。
+
+- 但**在某些需求下，父元素的高度不是确定的**。（如新闻）
+- 但子盒子浮动后不占有位置，此时若未指定父元素的高度，父元素高度将为0，会影响下面的标准流盒子。
+
+
+
+清除浮动的本质：
+
+- 清除浮动之后，父级元素将根据浮动的子盒子自动设置高度。
+
+
+
+语法：
+
+```css
+选择器 {clear: 属性值;}
+```
+
+| 属性值 | 描述                                       |
+| ------ | ------------------------------------------ |
+| left   | 不允许左侧有浮动元素（清除左侧浮动的影响） |
+| right  | 不允许右侧有浮动元素（清除右侧浮动的影响） |
+| both   | 同时清除左右两侧浮动的影响                 |
+
+
+
+清除浮动的方法：
+
+1. 额外标签法（隔墙法）：
+
+   在浮动元素的末尾，添加一个空标签（必须是块级元素）。
+
+   ```html
+   <style>
+       .container{
+           width: 800px;
+           margin: 0 auto;
+           background-color: skyblue;
+       }
+   
+       .box-float {
+           float: left;
+           width: 200px;
+           height: 200px;
+           background-color: pink;
+       }
+   </style>
+   
+   <body>
+       <div class="container">
+           <div class="box-float">1</div>
+           <div class="box-float">2</div>
+           <div class="box-float">3</div>
+           <div style="clear: both;"></div>
+       </div>
+   </body>
+   ```
+
+2. 父级元素添加 `overflow` 属性：
+
+    给父级元素设置该属性，属性值为 hidden、auto 或 scroll
+    
+    ```html
+    <style>
+        .container{
+            width: 800px;
+            margin: 0 auto;
+            background-color: skyblue;
+            overflow: hidden;
+        }
+    
+        .box-float {
+            float: left;
+            width: 200px;
+            height: 200px;
+            background-color: pink;
+        }
+    </style>
+    
+    <body>
+        <div class="container">
+            <div class="box-float">1</div>
+            <div class="box-float">2</div>
+            <div class="box-float">3</div>
+        </div>
+    </body>
+    ```
+
+3. 父级元素添加 `:after`伪元素：
+
+   ```html
+   <style>
+       .clearfix:after{
+           content: "";
+           display: block;
+           height: 0;
+           clear: both;
+           visibility: hidden;
+       }
+   
+       .clearfix{
+           *zoom: 1;
+       }
+   
+       .container{
+           width: 800px;
+           margin: 0 auto;
+           background-color: skyblue;
+       }
+   
+       .box-float {
+           float: left;
+           width: 200px;
+           height: 200px;
+           background-color: pink;
+       }
+   </style>
+   
+   <body>
+       <div class="container clearfix">
+           <div class="box-float">1</div>
+           <div class="box-float">2</div>
+           <div class="box-float">3</div>
+       </div>
+   </body>
+   ```
+
+4. 父级元素添加 双伪元素：
+
+   ```html
+   <style>
+       .clearfix:before,
+       .clearfix:after{
+           content: "";
+           display: table;
+       }
+   
+       .clearfix:after{
+           clear: both;
+       }
+   
+       .clearfix{
+           *zoom: 1;
+       }
+   
+       .container{
+           width: 800px;
+           margin: 0 auto;
+           background-color: skyblue;
+       }
+   
+       .box-float {
+           float: left;
+           width: 200px;
+           height: 200px;
+           background-color: pink;
+       }
+   </style>
+   
+   <body>
+       <div class="container clearfix">
+           <div class="box-float">1</div>
+           <div class="box-float">2</div>
+           <div class="box-float">3</div>
+       </div>
+   </body>
+   ```
+
+   
+
+# CSS属性书写顺序
+
+1. 布局定位属性：
+
+   display / position / float / clear / visibility / overflow
+
+2. 自身属性：
+
+   width / height / margin / padding / border / background
+
+3. 文本属性：
+
+   color / font / text-decoration / text-align / vertical-align / white-space / break-word
+
+4. 其他属性（CSS3）：
+
+   content / cursor / border-radius / box-shadow / text-shadow / background:liner-gradient...
+
+
+
+
+
+# CSS定位
+
+https://www.bilibili.com/video/BV14J4114768?p=221&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3
