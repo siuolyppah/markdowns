@@ -1,0 +1,3 @@
+# 前端工程化
+
+[黑马程序员Vue全套视频教程，从vue2.0到vue3.0一套全覆盖，前端必会的框架教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1zq4y1p7ga?p=3&vd_source=be746efb77e979ca275e4f65f2d8cda3)
