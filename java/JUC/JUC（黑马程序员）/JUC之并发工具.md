@@ -854,7 +854,190 @@ public static void main(String[] args) {
 
 ## AQS 原理
 
-[黑马程序员全面深入学习Java并发编程，JUC并发编程全套教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV16J411h7Rd?p=235&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+### 概述
+
+全称 AbstractQueuedSynchronizer，是阻塞式锁和相关的同步器工具的框架。
+
+特点：
+
+- 用 state 属性来表示资源的状态（分独占模式和共享模式），子类需要定义如何维护这个状态，控制如何获取锁和释放锁
+
+  - getState - 获取 state 状态
+
+  - setState - 设置 state 状态
+
+  - compareAndSetState - cas 机制设置 state 状态
+
+    > 注意：cas失败后，不会再次尝试，而是进入阻塞队列。
+
+  - 独占模式是只有一个线程能够访问资源，而共享模式可以允许多个线程访问资源（可以设置共享线程的上限）
+
+- 提供了基于 FIFO 的等待队列，类似于 Monitor 的 EntryList
+
+- 条件变量来实现等待、唤醒机制，支持多个条件变量，类似于 Monitor 的 WaitSet
+
+
+
+子类主要实现这样一些方法（默认抛出 UnsupportedOperationException）：
+
+- tryAcquire
+- tryRelease
+- tryAcquireShared
+- tryReleaseShared
+- isHeldExclusively
+
+
+
+关于用法：
+
+- 获取锁：
+
+  ```java
+  // 如果获取锁失败
+  if (!tryAcquire(arg)) {
+      // 入队, 可以选择阻塞当前线程 （park）
+  }
+  ```
+
+- 释放锁：
+
+  ```java
+  // 如果释放锁成功
+  if (tryRelease(arg)) {
+      // 让阻塞线程恢复运行 （unpark）
+  }
+  ```
+
+  
+
+### 自定义锁
+
+```java
+package n7.demo3;
+
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.AbstractQueuedSynchronizer;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+
+@Slf4j(topic = "c.AqsTest")
+public class AqsTest {
+
+    public static void main(String[] args) {
+        MyLock lock = new MyLock();
+
+        new Thread(() -> {
+            lock.lock();
+            try {
+                log.debug("加锁成功");
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } finally {
+
+                lock.unlock();
+                log.debug("解锁成功");
+            }
+        },"t1").start();
+
+        new Thread(() -> {
+            lock.lock();
+            try {
+                log.debug("加锁成功");
+            } finally {
+
+                lock.unlock();
+                log.debug("解锁成功");
+            }
+        },"t2").start();
+    }
+}
+
+// 自定义锁（不可重入锁）
+class MyLock implements Lock {
+
+    // 同步器类（独占锁）
+    class MySync extends AbstractQueuedSynchronizer {
+
+        @Override
+        protected boolean tryAcquire(int arg) {
+            if (compareAndSetState(0, 1)) {
+                // 设置持有锁的线程
+                setExclusiveOwnerThread(Thread.currentThread());
+                return true;
+            }
+
+            return false;
+        }
+
+        @Override
+        protected boolean tryRelease(int arg) {
+            setExclusiveOwnerThread(null);
+            setState(0);    // 此处会有写屏障。写屏障之前的修改对其他线程可见
+            return true;
+        }
+
+        // 是否持有独占锁
+        @Override
+        protected boolean isHeldExclusively() {
+            return getState() == 1;
+        }
+
+        public Condition newCondition() {
+            return new ConditionObject();
+        }
+    }
+
+    private MySync sync = new MySync();
+
+    @Override   // 加锁失败，则进入阻塞队列等待
+    public void lock() {
+        sync.acquire(1);
+    }
+
+    @Override
+    public void lockInterruptibly() throws InterruptedException {
+        sync.acquireInterruptibly(1);
+    }
+
+    @Override   // 尝试加锁，尝试一次
+    public boolean tryLock() {
+        return sync.tryRelease(1);
+    }
+
+    @Override
+    public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
+        return sync.tryAcquireNanos(1, unit.toNanos(time));
+    }
+
+    @Override
+    public void unlock() {
+        sync.release(1);
+    }
+
+    @Override
+    public Condition newCondition() {
+        return sync.newCondition();
+    }
+}
+```
+
+```
+20:07:48 [t1] c.AqsTest - 加锁成功
+20:07:49 [t1] c.AqsTest - 解锁成功
+20:07:49 [t2] c.AqsTest - 加锁成功
+20:07:49 [t2] c.AqsTest - 解锁成功
+```
+
+
+
+## ReentrantLock原理
+
+[黑马程序员全面深入学习Java并发编程，JUC并发编程全套教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV16J411h7Rd?p=238&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+
+
 
 
 

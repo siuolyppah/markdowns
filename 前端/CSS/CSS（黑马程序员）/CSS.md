@@ -1615,4 +1615,287 @@ CSS提供了三种传统布局方式（即盒子如何排列顺序）：
 
 # CSS定位
 
-https://www.bilibili.com/video/BV14J4114768?p=221&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3
+![image-20220612162808234](CSS.assets/image-20220612162808234.png)
+
+
+
+## 定位的作用
+
+- 让盒子自由的，在另一个盒子内移动位置；
+- 或固定在屏幕的某个位置
+
+
+
+## 定位的语法
+
+定位需要两部分：
+
+- 定位模式：通过`position`属性设置，其值有4个：
+
+  | 值       | 语义     |
+  | -------- | -------- |
+  | static   | 静态定位 |
+  | relative | 相对定位 |
+  | absolute | 绝对定位 |
+  | fixed    | 固定定位 |
+
+- 边偏移：
+
+  | 边偏移属性 | 示例         | 描述                                             |
+  | ---------- | ------------ | ------------------------------------------------ |
+  | top        | top: 80px    | 顶端偏移量，定义元素相对于其父元素上边线的距离。 |
+  | bottom     | bottom: 80px | 底部偏移量，定义元素相对于其父元素下边线的距离。 |
+  | left       | left: 80px   | 左侧偏移量，定义元素相对于其父元素左边线的距离。 |
+  | right      | right: 80px  | 右侧偏移量，定义元素相对于其父元素右边线的距离。 |
+
+  > 注意：
+  >
+  > 标准流和浮动，是不能使用该4个边偏移属性的。
+
+
+
+## 静态定位
+
+静态定位是元素的默认定位方式（即无定位）
+
+```css
+选择器 {position: static;}
+```
+
+
+
+- 静态定位，**按照标准流特性摆放位置，没有边偏移**
+
+
+
+## 相对定位
+
+相对定位，是指元素在移动位置时，是**相对与它自身原来的位置**来说的。
+
+```css
+选择器 {position: relative;}
+```
+
+
+
+- 设置了相对定位的盒子，原来在标准流的位置继续占有，后面的盒子仍以标准流的方式对待它。（**不脱标，继续保留原来位置**）
+
+
+
+```html
+<style>
+    .box1{
+        position: relative;
+        top: 100px;
+        left: 100px;
+
+        width: 200px;
+        height: 200px;
+        background-color: pink;
+    }
+
+    .box2{
+        width: 200px;
+        height: 200px; 
+        background-color: deeppink;
+    }
+</style>
+
+<body>
+    <div class="box1"></div>
+    <div class="box2"></div>
+</body>
+```
+
+![image-20220612165319338](CSS.assets/image-20220612165319338.png)
+
+
+
+## 绝对定位
+
+绝对定位，是指元素在移动位置时，是**相对与它的祖先元素**来说的。
+
+```css
+选择器 {position: absolute;}
+```
+
+
+
+特点：
+
+- 如果**没有祖先元素**或**祖先元素没有定位**，则以浏览器为准定位
+
+- 如果祖先元素有定位（相对、绝对、固定定位都可），则**以最近一级的、且有定位的祖先元素为参考**。
+
+- 绝对定位，不再占有原先的位置。（**脱标**）
+
+
+
+```html
+<style>
+    .box1{
+        position: relative;
+        width: 400px;
+        height: 400px;
+        background-color: pink;
+    }
+
+    .box2{
+        position: absolute;
+        top: 50px;
+        right: 50px;
+
+        width: 200px;
+        height: 200px; 
+        background-color: skyblue;
+    }
+</style>
+
+<body>
+    <div class="box1">
+        <div class="box2"></div>
+    </div>
+</body>
+```
+
+![image-20220612170443552](CSS.assets/image-20220612170443552.png)
+
+
+
+技巧：
+
+- 令绝对定位的盒子居中：
+
+  ```html
+  <style>
+      .box {
+          position: absolute;
+          left: 50%;
+          margin-left: -100px;
+  
+          width: 200px;
+          height: 200px;
+          background-color: pink;
+      }
+  </style>
+  
+  <body>
+      <div class="box"></div>
+  </body>
+  ```
+
+
+
+## 固定定位
+
+固定定位，是指**将元素定位在浏览器可视区的位置**。
+
+```css
+选择器 {position: fixed;}
+```
+
+
+
+特点：
+
+- 以浏览器的可视窗口为参照
+- 不占有原先位置（**脱标**）
+
+
+
+技巧：
+
+- 让固定定位的盒子的，固定在版心的右侧的。
+
+  1. 设置left:50%;
+  2. 设置margin-left:版心宽度一半;
+
+  ```html
+  <style>
+      .w{
+          width: 800px;
+          height: 1400px;
+          background-color: pink;
+          margin: 0 auto;
+      }
+  
+      .fixed{
+          position:fixed;
+          left: 50%;
+          margin-left: 400px;
+          width: 50px;
+          height: 150px;
+          background-color: skyblue;
+      }
+  </style>
+  
+  <body>
+      <div class="fixed"></div>
+      <div class="w">版心</div>
+  </body>
+  ```
+
+
+
+## 粘性定位
+
+粘性定位（sticky），可以认为是相对定位和固定定位的混合。
+
+```css
+选择器 {position: sticky;}
+```
+
+
+
+特点：
+
+- 以浏览器的可视窗口为参照（固定定位特点）
+- 粘性定位占有原先位置（相对定位的特点）
+- 必须添加top、left、right、bottom其中一个属性才生效（否则视作相对定位）
+
+
+
+## 定位的叠放次序 z-index
+
+在使用定位进行布局时，可能会出现盒子位置重叠的情况。
+
+此时，可以使用`z-index`属性，来设置盒子的前后（Z轴）次序。
+
+```css
+选择器 {z-index: 1;}
+```
+
+> - 数值可以是正整数、负整数、0。
+> - 默认是auto。
+> - 值越大，盒子越靠上。
+> - 值相同的，书写在最下面的，放在最上面。
+
+
+
+只有定位的盒子，z-index属性才生效。
+
+
+
+## 定位的特性
+
+- 绝对定位和固定定位，与浮动类似：
+  - 行内元素添加绝对或固定定位后，可以直接设置高度和宽度
+  - 块级元素添加绝对或固定定位后，若不设置宽度或高度，默认大小是内容的大小。
+
+- 绝对定位或固定定位，会完全压住盒子。
+
+  > 浮动元素则不同，它只会压住它下面标准流的盒子，但不会压住下面标准流盒子里面的文字和图片。
+
+
+
+
+
+
+
+## 总结
+
+![image-20220612174815018](CSS.assets/image-20220612174815018.png)
+
+
+
+[黑马程序员pink老师前端入门教程，零基础必看的h5(html5)+css3+移动端前端视频教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV14J4114768?p=238&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)

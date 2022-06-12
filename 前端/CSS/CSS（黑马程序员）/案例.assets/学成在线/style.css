@@ -12,20 +12,20 @@ a {
 }
 
 body {
-    background-color: #f3f5f7; 
+    background-color: #f3f5f7;
 }
 
 .clearfix:before,
-.clearfix:after{
+.clearfix:after {
     content: "";
     display: table;
 }
 
-.clearfix:after{
+.clearfix:after {
     clear: both;
 }
 
-.clearfix{
+.clearfix {
     *zoom: 1;
 }
 
@@ -230,21 +230,21 @@ body {
     color: #00a4ff
 }
 
-.box{
+.box {
     margin-top: 30px;
 }
 
-.box-hd{
+.box-hd {
     height: 45px;
 }
 
-.box-hd h3{
+.box-hd h3 {
     float: left;
     font-size: 20px;
     color: #494949;
 }
 
-.box-hd a{
+.box-hd a {
     float: right;
     font-size: 12px;
     color: #a5a5a5;
@@ -252,11 +252,12 @@ body {
     margin-right: 30px;
 }
 
-.box-bd ul{
+.box-bd ul {
     width: 1225px;
 }
 
 .box-bd ul li {
+    position: relative;
     float: left;
     margin-right: 15px;
     margin-bottom: 15px;
@@ -265,11 +266,17 @@ body {
     background: #fff;
 }
 
-.box-bd ul li img{
+.box-bd ul li>img {
     width: 100%;
 }
 
-.box-bd ul li h4{
+.box-bd ul li em {
+    position: absolute;
+    top: 4px;
+    right: -4px;
+}
+
+.box-bd ul li h4 {
     margin: 20px 20px 20px 25px;
     font-size: 14px;
     color: #050505;
@@ -282,11 +289,11 @@ body {
     color: #999;
 }
 
-.box-bd .info span{
+.box-bd .info span {
     color: #ff7c2d;
 }
 
-.footer{
+.footer {
     height: 415px;
     background-color: #fff;
 }
@@ -295,17 +302,17 @@ body {
     padding-top: 35px;
 }
 
-.copyright{
+.copyright {
     float: left;
 }
 
-.copyright p{
+.copyright p {
     margin: 20px 0 15px 0;
     font-size: 12px;
     color: #666;
 }
 
-.copyright .app{
+.copyright .app {
     display: block;
     width: 118px;
     height: 33px;
@@ -316,7 +323,7 @@ body {
     font-size: 16px;
 }
 
-.links{
+.links {
     float: right;
 }
 
@@ -325,13 +332,13 @@ body {
     margin-left: 100px;
 }
 
-.links dl dt{
+.links dl dt {
     font-size: 16px;
     color: #333;
     margin-bottom: 5px;
 }
 
-.links dl dd a{
+.links dl dd a {
     color: #333;
     font-size: 12px;
 }
