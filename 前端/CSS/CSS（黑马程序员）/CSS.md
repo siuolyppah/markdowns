@@ -1898,4 +1898,142 @@ CSS提供了三种传统布局方式（即盒子如何排列顺序）：
 
 
 
-[黑马程序员pink老师前端入门教程，零基础必看的h5(html5)+css3+移动端前端视频教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV14J4114768?p=238&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+
+
+# 元素的显示与隐藏
+
+## display属性
+
+常见的值：
+
+- block
+- inline
+- inline-block
+- none：隐藏对象
+
+> **被隐藏的元素，不再占有原先的位置**。
+
+
+
+## visibility属性
+
+常见值：
+
+- inherit：继承上一个父元素的可见性
+- visible：对象可视
+- hidden：对象隐藏
+- collapse：主要用于隐藏表格的行或列。对于表格外的元素，其作用等同hidden
+
+> 被隐藏的元素，**仍然占有原先的位置**。
+
+
+
+## overflow溢出显示隐藏
+
+ overflow属性，指定了如果内容溢出一个元素的框（超出其指定高度和宽度）时，会发生什么。
+
+取值：
+
+- visible：不剪切内容，也不添加滚动条。
+- auto：body和textarea元素的默认值。在需要时剪切内容并添加滚动条。
+- hidden：不显示超出对象尺寸的内容。
+- scroll：总是显示滚动条。
+
+
+
+# 高级技巧
+
+![image-20220613162515542](CSS.assets/image-20220613162515542.png)
+
+
+
+## 精灵图
+
+- 用于减少服务器接收和发送请求的次数，提高网页的加载速度。
+- 核心原理：将网页中的一些小**背景图像**，整合到一张大图片中。
+
+- 使用方式：
+
+  移动背景图片的位置(`background-position`属性)。盒子外的背景图片是看不到的。
+
+
+
+## 字体图标 iconfont
+
+字体图标的下载：
+
+- icomoon字体库：[Icon Font & SVG Icon Sets ❍ IcoMoon](https://icomoon.io/)
+
+- 阿里iconfont字体库：[iconfont-阿里巴巴矢量图标库](https://www.iconfont.cn/)
+
+
+
+使用步骤：
+
+1. 下载字体资源
+
+2. 在CSS中引入，例如：
+
+   ```html
+   <style>
+       /* 字体声明 */
+       @font-face {
+           font-family: 'icomoon';
+           src: url('fonts/icomoon.eot?p4ssmb');
+           src: url('fonts/icomoon.eot?p4ssmb#iefix') format('embedded-opentype'),
+               url('fonts/icomoon.ttf?p4ssmb') format('truetype'),
+               url('fonts/icomoon.woff?p4ssmb') format('woff'),
+               url('fonts/icomoon.svg?p4ssmb#icomoon') format('svg');
+           font-weight: normal;
+           font-style: normal;
+           font-display: block;
+       }
+   </style>
+   ```
+
+3. 使用字体图标：
+
+   ```html
+   <style>
+       span {
+           font-family: 'icomoon';
+           font-size: 100px;
+           color: pink;
+       }
+   </style>
+   
+   <body>
+       <span></span>
+   </body>
+   ```
+
+   
+
+## CSS三角
+
+```html
+<style>
+    .box1 {
+        width: 0;
+        height: 0;
+        line-height: 0;
+        font-size: 0;
+        border: 50px solid transparent;
+        border-left-color: pink;
+    }
+</style>
+
+<body>
+    <div class="box1"></div>
+</body>
+```
+
+![image-20220613165938519](CSS.assets/image-20220613165938519.png)
+
+即做法：不给盒子设置大小，但设置它的边框border
+
+
+
+## CSS用户界面样式
+
+[黑马程序员pink老师前端入门教程，零基础必看的h5(html5)+css3+移动端前端视频教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV14J4114768?p=261&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)
