@@ -634,7 +634,7 @@ public class TestClassPathXmlApplicationContext {
             log.debug("bean name:{}", name);
         }
 
-        // FileSystemXmlApplicationContext则传入Resource对象
+        // 若是FileSystemXmlApplicationContext类，则传入Resource对象
         XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(beanFactory);
         reader.loadBeanDefinitions(new ClassPathResource("b01.xml"));
         log.debug("after read Definition");
@@ -741,8 +741,6 @@ public class TestAnnotationConfigServletWebServerApplicationContext {
     public static void main(String[] args) {
         AnnotationConfigServletWebServerApplicationContext context =
                 new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
-
-
     }
 
     @Configuration
@@ -1321,5 +1319,28 @@ public class DigInAutoWired {
 
 # BeanFactory后处理器
 
-[黑马程序员Spring视频教程，全面深度讲解spring5底层原理_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1P44y1N7QG?p=20&spm_id_from=pageDriver)
+continue：[黑马程序员Spring视频教程，全面深度讲解spring5底层原理_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1P44y1N7QG?p=20&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+
+
+
+## BeanFactory后处理器的作用
+
+- @ComponentScan, @Bean, @Mapper 等注解的解析属于核心容器（即 BeanFactory）的扩展功能
+- 这些扩展功能由不同的 BeanFactory 后处理器来完成，其实**主要就是补充了一些 bean 定义**
+
+
+
+工厂后处理器的作用：
+
+* ConfigurationClassPostProcessor 可以解析
+  * @ComponentScan
+  * @Bean
+  * @Import
+  * @ImportResource
+* MapperScannerConfigurer 可以解析
+  * Mapper 接口
+
+
+
+## 模拟解析 @ComponentScan注解
 

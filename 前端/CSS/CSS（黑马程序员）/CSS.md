@@ -2036,4 +2036,381 @@ CSS提供了三种传统布局方式（即盒子如何排列顺序）：
 
 ## CSS用户界面样式
 
-[黑马程序员pink老师前端入门教程，零基础必看的h5(html5)+css3+移动端前端视频教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV14J4114768?p=261&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+界面样式，指更改一些用户操作样式，以便提高用户体验。例如：
+
+- 更改用户的鼠标样式
+
+  `curosr`属性，设置鼠标指针以何种系统预定义的光标形状。
+
+  | 属性值      | 描述   |
+  | ----------- | ------ |
+  | default     | 默认   |
+  | pointer     | 手     |
+  | move        | 十字架 |
+  | text        | 文本   |
+  | not-allowed | 禁止   |
+
+  ```html
+  <style>
+      ul li{
+          cursor: move;
+      }
+  </style>
+  
+  <body>
+      <ul>
+          <li>move样式</li>
+      </ul>
+  </body>
+  ```
+
+- 取消表单轮廓：
+
+  `outline`属性，可以设置。
+
+  ```html
+  <style>
+      input {
+          outline: none;
+      }
+  </style>
+  
+  <body>
+      <input type="text">
+  </body>
+  ```
+
+- 防止表单域(textarea)拖拽
+
+  `resize`属性：
+
+  ```html
+  <style>
+      textarea{
+          resize: none;
+      }
+  </style>
+  
+  <body>
+      <textarea name="" id="" cols="30" rows="10"></textarea>
+  </body>
+  ```
+
+  
+
+## vertical-align 属性
+
+用于**设置行内块元素（如图片、表单）和文字*垂直对齐***。
+
+```css
+vertical-align: baseline | top | middle | bottom
+```
+
+| 值       | 描述                                     |
+| -------- | ---------------------------------------- |
+| baseline | 默认。元素放置在父元素的基线上。         |
+| top      | 把元素的顶端和行中最高元素的顶端对齐。   |
+| middle   | 把此元素放在父元素的中部。               |
+| bottom   | 把元素的顶端和行中最低的元素的顶端对齐。 |
+
+![image-20220614221518005](CSS.assets/image-20220614221518005.png)
+
+
+
+## 令溢出的文字以省略号显示
+
+- 单行文本溢出：
+
+  ```html
+      <style>
+          div {
+              width: 150px;
+              height: 80px;
+              background-color: pink;
+              margin: 100px auto;
+  
+              white-space: nowrap; <!-- 默认值normal会自动换行-->
+              overflow: hidden;
+              text-overflow: ellipsis; <!-- 用省略号代替溢出内容 -->
+          }
+      </style>
+  
+  
+  <body>
+      <div>
+          哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈
+      </div>
+  </body>
+  ```
+
+- 多行文本溢出：
+
+  ```html
+  <style>
+      div {
+          width: 150px;
+          height: 80px;
+          background-color: pink;
+          margin: 100px auto;
+  
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: -webkit-box;   /* 弹性伸缩盒子模型显示 */
+          -webkit-line-clamp: 2;  /* 限制一个块元素显示的文本行数 */
+          -webkit-box-orient: vertical; /* 设置或检索伸缩盒对象的子元素的排列方式*/
+      }
+  </style>
+  
+  <body>
+      <div>
+          哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈
+      </div>
+  </body>
+  ```
+
+  
+
+## 布局技巧
+
+### margin负值画分隔线
+
+```html
+<style>
+    ul li {
+        list-style: none;
+        float: left;
+
+        width: 150px;
+        height: 200px;
+        border: 1px solid red;
+
+        margin-left: -1px;
+    }
+
+    ul li:hover{
+        position: relative; /* 或使用z-index */
+        border: 1px solid skyblue;
+    }
+</style>
+
+<body>
+    <ul>
+        <li>1</li>
+        <li>2</li>
+        <li>3</li>
+        <li>4</li>
+        <li>5</li>
+    </ul>
+</body>
+```
+
+
+
+###  文字围绕浮动元素
+
+> 浮动不会压住下面的标准流的文字，文字会自动出来。
+
+ ```html
+ <style>
+     .box{
+         width: 300px;
+         height: 70px;
+         background-color: pink;
+         margin: 0 auto;
+     }
+ 
+     .pic{
+         float: left;
+         width: 120px;
+         height: 60px;
+     }
+ 
+     .pic img{
+         width: 100%;
+     }
+ </style>
+ 
+ <body>
+     <div class="box">
+         <div class="pic">
+             <img src="" alt="">
+         </div>
+         <p>【集锦】热身赛-巴西0-1秘鲁 内马尔替补两人血染赛场</p>
+     </div>
+ </body>
+ ```
+
+
+
+### 行内块巧妙运用
+
+```html
+<style>
+    *{
+        padding: 0;
+        margin: 0;
+    }
+
+    .box{
+        text-align: center;
+    }
+    .box a{
+        display: inline-block;
+        width: 36px;
+        height: 36px;
+        background-color: #f7f7f7;
+        border: 1px solid #ccc;
+        text-align: center;
+        line-height: 36px;
+        text-decoration: none;
+        color: #333;
+        font-size: 14px;
+    }
+
+    .box .prev,
+    .box .next{
+        width: 85px;
+    }
+
+    .box .current,
+    .box .elp{
+        background: #fff;
+        border: none;
+    }
+
+    .box input{
+        height: 36px;
+        width: 45px;
+        border: 1px solid #ccc;
+        outline: none;
+    }
+
+    .box button{
+        width: 60px;
+        height: 36px;
+        background-color: #f7f7f7;
+        border: 1px solid #ccc;
+    }
+</style>
+
+<body>
+    <div class="box">
+        <a href="#" class="prev"> &lt;&lt;上一页 </a>
+        <a href="#">1</a>
+        <a href="#" class="current">2</a>
+        <a href="#">3</a>
+        <a href="#">4</a>
+        <a href="#">5</a>
+        <a href="#">6</a>
+        <a href="#" class="elp">...</a>
+        <a href="#" class="next"> &gt;&gt;下一页</a>
+        到第 <input type="text"> 页
+        <button>确定</button>
+    </div> 
+</body>
+```
+
+> 父元素的`text-algin`属性，会令子行内或行元素居中对齐
+
+
+
+### CSS三角
+
+ ```html
+ <style>
+     .box{
+         width: 0;
+         height: 0;
+         border-top: 100px solid transparent;
+         border-right: 50px solid skyblue;
+     }
+ 
+ </style>
+ 
+ <body>
+     <div class="box"></div>
+ </body>
+ ```
+
+![image-20220614230230890](CSS.assets/image-20220614230230890.png)
+
+
+
+# CSS初始化
+
+- 不同浏览器对有些标签的默认值是不同的。
+- 为了消除不同浏览器对HTML呈现的差异，需要对CSS进行初始化
+
+> CSS初始化，页称为重设浏览器样式。
+
+
+
+```css
+/* 把我们所有标签的内外边距清零 */
+* {
+    margin: 0;
+    padding: 0
+}
+/* em 和 i 斜体的文字不倾斜 */
+em,
+i {
+    font-style: normal
+}
+/* 去掉li 的小圆点 */
+li {
+    list-style: none
+}
+
+img {
+    /* border 0 照顾低版本浏览器 如果 图片外面包含了链接会有边框的问题 */
+    border: 0;
+    /* 取消图片底侧有空白缝隙的问题 */
+    vertical-align: middle
+}
+
+button {
+    /* 当我们鼠标经过button 按钮的时候，鼠标变成小手 */
+    cursor: pointer
+}
+
+a {
+    color: #666;
+    text-decoration: none
+}
+
+a:hover {
+    color: #c81623
+}
+
+button,
+input {
+    /* "\5B8B\4F53" 就是宋体的意思 这样浏览器兼容性比较好 */
+    font-family: Microsoft YaHei, Heiti SC, tahoma, arial, Hiragino Sans GB, "\5B8B\4F53", sans-serif
+}
+
+body {
+    /* CSS3 抗锯齿形 让文字显示的更加清晰 */
+    -webkit-font-smoothing: antialiased;
+    background-color: #fff;
+    font: 12px/1.5 Microsoft YaHei, Heiti SC, tahoma, arial, Hiragino Sans GB, "\5B8B\4F53", sans-serif;
+    color: #666
+}
+
+.hide,
+.none {
+    display: none
+}
+/* 清除浮动 */
+.clearfix:after {
+    visibility: hidden;
+    clear: both;
+    display: block;
+    content: ".";
+    height: 0
+}
+
+.clearfix {
+    *zoom: 1
+}
+```
+
