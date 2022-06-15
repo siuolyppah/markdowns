@@ -96,7 +96,7 @@ public class HelloController {
 
 ## 登录校验流程
 
-![image-20220614162742025](Spring%20Security.assets/image-20220614162742025.png)
+![image-20220615203130507](Spring%20Security.assets/image-20220615203130507.png)
 
 
 
@@ -110,7 +110,7 @@ SpringSecurity的原理是一个**过滤器链**，内部包含了提供各种�
 
 核心的过滤器如下：
 
-![image-20220614163707591](Spring%20Security.assets/image-20220614163707591.png)
+![image-20220615203125102](Spring%20Security.assets/image-20220615203125102.png)
 
 - `UsernamePasswordAuthenticationFilter`：
 
@@ -134,7 +134,7 @@ SpringSecurity的原理是一个**过滤器链**，内部包含了提供各种�
 
 ### 认证流程详解
 
-![image-20220614165102472](Spring%20Security.assets/image-20220614165102472.png)
+![image-20220615203113386](Spring%20Security.assets/image-20220615203113386.png)
 
 - Authentication接口：它的实现类，表示当前访问系统的用户，封装了用户相关信息
 - AuthenticationManager接口：定义了认证Authentication的方法
@@ -197,6 +197,33 @@ SpringSecurity的原理是一个**过滤器链**，内部包含了提供各种�
       <artifactId>jjwt</artifactId>
       <version>0.9.0</version>
   </dependency>
+  
+  <dependency>
+      <groupId>com.baomidou</groupId>
+      <artifactId>mybatis-plus-boot-starter</artifactId>
+      <version>3.4.3</version>
+  </dependency>
+  <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+  </dependency>
+  
+  <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+  </dependency>
+  ```
+
+
+- 配置：
+
+  ```yaml
+  spring:
+    datasource:
+      url: jdbc:mysql://localhost:3306/sg_security?characterEncoding=utf-8&serverTimezone=UTC
+      username: root
+      password: root
+      driver-class-name: com.mysql.cj.jdbc.Driver
   ```
 
 - FastJson序列化器：
@@ -408,23 +435,773 @@ SpringSecurity的原理是一个**过滤器链**，内部包含了提供各种�
 - RedisCache：封装RedisTemplate的方法
 
   ```java
+  
+  import java.util.*;
+  import java.util.concurrent.TimeUnit;
+  
+  @SuppressWarnings(value = { "unchecked", "rawtypes" })
+  @Component
+  public class RedisCache
+  {
+      @Autowired
+      public RedisTemplate redisTemplate;
+  
+      /**
+       * 缓存基本的对象，Integer、String、实体类等
+       *
+       * @param key 缓存的键值
+       * @param value 缓存的值
+       */
+      public <T> void setCacheObject(final String key, final T value)
+      {
+          redisTemplate.opsForValue().set(key, value);
+      }
+  
+      /**
+       * 缓存基本的对象，Integer、String、实体类等
+       *
+       * @param key 缓存的键值
+       * @param value 缓存的值
+       * @param timeout 时间
+       * @param timeUnit 时间颗粒度
+       */
+      public <T> void setCacheObject(final String key, final T value, final Integer timeout, final TimeUnit timeUnit)
+      {
+          redisTemplate.opsForValue().set(key, value, timeout, timeUnit);
+      }
+  
+      /**
+       * 设置有效时间
+       *
+       * @param key Redis键
+       * @param timeout 超时时间
+       * @return true=设置成功；false=设置失败
+       */
+      public boolean expire(final String key, final long timeout)
+      {
+          return expire(key, timeout, TimeUnit.SECONDS);
+      }
+  
+      /**
+       * 设置有效时间
+       *
+       * @param key Redis键
+       * @param timeout 超时时间
+       * @param unit 时间单位
+       * @return true=设置成功；false=设置失败
+       */
+      public boolean expire(final String key, final long timeout, final TimeUnit unit)
+      {
+          return redisTemplate.expire(key, timeout, unit);
+      }
+  
+      /**
+       * 获得缓存的基本对象。
+       *
+       * @param key 缓存键值
+       * @return 缓存键值对应的数据
+       */
+      public <T> T getCacheObject(final String key)
+      {
+          ValueOperations<String, T> operation = redisTemplate.opsForValue();
+          return operation.get(key);
+      }
+  
+      /**
+       * 删除单个对象
+       *
+       * @param key
+       */
+      public boolean deleteObject(final String key)
+      {
+          return redisTemplate.delete(key);
+      }
+  
+      /**
+       * 删除集合对象
+       *
+       * @param collection 多个对象
+       * @return
+       */
+      public long deleteObject(final Collection collection)
+      {
+          return redisTemplate.delete(collection);
+      }
+  
+      /**
+       * 缓存List数据
+       *
+       * @param key 缓存的键值
+       * @param dataList 待缓存的List数据
+       * @return 缓存的对象
+       */
+      public <T> long setCacheList(final String key, final List<T> dataList)
+      {
+          Long count = redisTemplate.opsForList().rightPushAll(key, dataList);
+          return count == null ? 0 : count;
+      }
+  
+      /**
+       * 获得缓存的list对象
+       *
+       * @param key 缓存的键值
+       * @return 缓存键值对应的数据
+       */
+      public <T> List<T> getCacheList(final String key)
+      {
+          return redisTemplate.opsForList().range(key, 0, -1);
+      }
+  
+      /**
+       * 缓存Set
+       *
+       * @param key 缓存键值
+       * @param dataSet 缓存的数据
+       * @return 缓存数据的对象
+       */
+      public <T> BoundSetOperations<String, T> setCacheSet(final String key, final Set<T> dataSet)
+      {
+          BoundSetOperations<String, T> setOperation = redisTemplate.boundSetOps(key);
+          Iterator<T> it = dataSet.iterator();
+          while (it.hasNext())
+          {
+              setOperation.add(it.next());
+          }
+          return setOperation;
+      }
+  
+      /**
+       * 获得缓存的set
+       *
+       * @param key
+       * @return
+       */
+      public <T> Set<T> getCacheSet(final String key)
+      {
+          return redisTemplate.opsForSet().members(key);
+      }
+  
+      /**
+       * 缓存Map
+       *
+       * @param key
+       * @param dataMap
+       */
+      public <T> void setCacheMap(final String key, final Map<String, T> dataMap)
+      {
+          if (dataMap != null) {
+              redisTemplate.opsForHash().putAll(key, dataMap);
+          }
+      }
+  
+      /**
+       * 获得缓存的Map
+       *
+       * @param key
+       * @return
+       */
+      public <T> Map<String, T> getCacheMap(final String key)
+      {
+          return redisTemplate.opsForHash().entries(key);
+      }
+  
+      /**
+       * 往Hash中存入数据
+       *
+       * @param key Redis键
+       * @param hKey Hash键
+       * @param value 值
+       */
+      public <T> void setCacheMapValue(final String key, final String hKey, final T value)
+      {
+          redisTemplate.opsForHash().put(key, hKey, value);
+      }
+  
+      /**
+       * 获取Hash中的数据
+       *
+       * @param key Redis键
+       * @param hKey Hash键
+       * @return Hash中的对象
+       */
+      public <T> T getCacheMapValue(final String key, final String hKey)
+      {
+          HashOperations<String, String, T> opsForHash = redisTemplate.opsForHash();
+          return opsForHash.get(key, hKey);
+      }
+  
+      /**
+       * 删除Hash中的数据
+       * 
+       * @param key
+       * @param hkey
+       */
+      public void delCacheMapValue(final String key, final String hkey)
+      {
+          HashOperations hashOperations = redisTemplate.opsForHash();
+          hashOperations.delete(key, hkey);
+      }
+  
+      /**
+       * 获取多个Hash中的数据
+       *
+       * @param key Redis键
+       * @param hKeys Hash键集合
+       * @return Hash对象集合
+       */
+      public <T> List<T> getMultiCacheMapValue(final String key, final Collection<Object> hKeys)
+      {
+          return redisTemplate.opsForHash().multiGet(key, hKeys);
+      }
+  
+      /**
+       * 获得缓存的基本对象列表
+       *
+       * @param pattern 字符串前缀
+       * @return 对象列表
+       */
+      public Collection<String> keys(final String pattern)
+      {
+          return redisTemplate.keys(pattern);
+      }
+  }
   ```
 
 - WebUtils：
 
   ```java
+  
+  import javax.servlet.http.HttpServletResponse;
+  import java.io.IOException;
+  
+  public class WebUtils
+  {
+      /**
+       * 将字符串渲染到客户端
+       * 
+       * @param response 渲染对象
+       * @param string 待渲染的字符串
+       * @return null
+       */
+      public static String renderString(HttpServletResponse response, String string) {
+          try
+          {
+              response.setStatus(200);
+              response.setContentType("application/json");
+              response.setCharacterEncoding("utf-8");
+              response.getWriter().print(string);
+          }
+          catch (IOException e)
+          {
+              e.printStackTrace();
+          }
+          return null;
+      }
+  }
   ```
 
 - 实体类：
 
   ```java
+  import java.io.Serializable;
+  import java.util.Date;
+  
+  
+  /**
+   * 用户表(User)实体类
+   *
+   * @author 三更
+   */
+  @Data
+  @AllArgsConstructor
+  @NoArgsConstructor
+  public class User implements Serializable {
+      private static final long serialVersionUID = -40356785423868312L;
+      
+      /**
+      * 主键
+      */
+      private Long id;
+      /**
+      * 用户名
+      */
+      private String userName;
+      /**
+      * 昵称
+      */
+      private String nickName;
+      /**
+      * 密码
+      */
+      private String password;
+      /**
+      * 账号状态（0正常 1停用）
+      */
+      private String status;
+      /**
+      * 邮箱
+      */
+      private String email;
+      /**
+      * 手机号
+      */
+      private String phonenumber;
+      /**
+      * 用户性别（0男，1女，2未知）
+      */
+      private String sex;
+      /**
+      * 头像
+      */
+      private String avatar;
+      /**
+      * 用户类型（0管理员，1普通用户）
+      */
+      private String userType;
+      /**
+      * 创建人的用户id
+      */
+      private Long createBy;
+      /**
+      * 创建时间
+      */
+      private Date createTime;
+      /**
+      * 更新人
+      */
+      private Long updateBy;
+      /**
+      * 更新时间
+      */
+      private Date updateTime;
+      /**
+      * 删除标志（0代表未删除，1代表已删除）
+      */
+      private Integer delFlag;
+  }
+  ```
+
+
+
+
+- 数据库：
+
+  ```sql
+  CREATE TABLE `sys_user` (
+    `id` BIGINT(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `user_name` VARCHAR(64) NOT NULL DEFAULT 'NULL' COMMENT '用户名',
+    `nick_name` VARCHAR(64) NOT NULL DEFAULT 'NULL' COMMENT '昵称',
+    `password` VARCHAR(64) NOT NULL DEFAULT 'NULL' COMMENT '密码',
+    `status` CHAR(1) DEFAULT '0' COMMENT '账号状态（0正常 1停用）',
+    `email` VARCHAR(64) DEFAULT NULL COMMENT '邮箱',
+    `phonenumber` VARCHAR(32) DEFAULT NULL COMMENT '手机号',
+    `sex` CHAR(1) DEFAULT NULL COMMENT '用户性别（0男，1女，2未知）',
+    `avatar` VARCHAR(128) DEFAULT NULL COMMENT '头像',
+    `user_type` CHAR(1) NOT NULL DEFAULT '1' COMMENT '用户类型（0管理员，1普通用户）',
+    `create_by` BIGINT(20) DEFAULT NULL COMMENT '创建人的用户id',
+    `create_time` DATETIME DEFAULT NULL COMMENT '创建时间',
+    `update_by` BIGINT(20) DEFAULT NULL COMMENT '更新人',
+    `update_time` DATETIME DEFAULT NULL COMMENT '更新时间',
+    `del_flag` INT(11) DEFAULT '0' COMMENT '删除标志（0代表未删除，1代表已删除）',
+    PRIMARY KEY (`id`)
+  ) ENGINE=INNODB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COMMENT='用户表'
   ```
 
   
 
-### 代码实现
+- 定义Mapper接口
 
-[SpringSecurity框架教程-Spring Security+JWT实现项目级前端分离认证授权-B站最通俗易懂的Spring Security课程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1mm4y1X7Hc?p=12&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+  ```java
+  public interface UserMapper extends BaseMapper<User> {
+  }
+  ```
+
+- 修改User实体类
+
+  ```java
+  类名上加@TableName(value = "sys_user") ,id字段上加 @TableId
+  ```
+
+- 配置Mapper扫描
+
+  ```java
+  @SpringBootApplication
+  @MapperScan("com.sangeng.mapper")
+  public class SimpleSecurityApplication {
+      public static void main(String[] args) {
+          ConfigurableApplicationContext run = SpringApplication.run(SimpleSecurityApplication.class);
+          System.out.println(run);
+      }
+  }
+  ```
+
+  
+
+### 数据库校验用户
+
+创建一个类实现UserDetailsService接口，重写其中的方法。更加用户名从数据库中查询用户信息
+
+```java
+/**
+ * @Author 三更  B站： https://space.bilibili.com/663528522
+ */
+@Service
+public class UserDetailsServiceImpl implements UserDetailsService {
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        //根据用户名查询用户信息
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getUserName,username);
+        User user = userMapper.selectOne(wrapper);
+        //如果查询不到数据就通过抛出异常来给出提示
+        if(Objects.isNull(user)){
+            throw new RuntimeException("用户名或密码错误");
+        }
+        //TODO 根据用户查询权限信息 添加到LoginUser中
+        
+        //封装成UserDetails对象返回 
+        return new LoginUser(user);
+    }
+}
+```
+
+因为UserDetailsService方法的返回值是UserDetails类型，所以需要定义一个类，实现该接口，把用户信息封装在其中。
+
+```java
+/**
+ * @Author 三更  B站： https://space.bilibili.com/663528522
+ */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class LoginUser implements UserDetails {
+
+    private User user;
+
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return null;
+    }
+
+    @Override
+    public String getPassword() {
+        return user.getPassword();
+    }
+
+    @Override
+    public String getUsername() {
+        return user.getUserName();
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
+}
+```
+
+>注意：如果要测试，需要往用户表中写入用户数据，并且如果你想让用户的密码是明文存储，需要在密码前加{noop}。例如 {noop}123
 
 
 
+### 密码加密存储
+
+- 实际项目中我们不会把密码明文存储在数据库中。
+
+- 默认使用的PasswordEncoder要求数据库中的密码格式为：{id}password 。它会根据id去判断密码的加密方式。但是我们一般不会采用这种方式。所以就需要替换PasswordEncoder。
+
+- 我们一般使用SpringSecurity为我们提供的`BCryptPasswordEncoder`。
+
+  > 我们只需要使用把BCryptPasswordEncoder对象注入Spring容器中，SpringSecurity就会使用该PasswordEncoder来进行密码校验。
+
+
+
+- 我们可以定义一个SpringSecurity的配置类，SpringSecurity要求这个配置类要继承WebSecurityConfigurerAdapter。
+
+  ```java
+  /**
+   * @Author 三更  B站： https://space.bilibili.com/663528522
+   */
+  @Configuration
+  public class SecurityConfig extends WebSecurityConfigurerAdapter {
+  
+  
+      @Bean
+      public PasswordEncoder passwordEncoder(){
+          return new BCryptPasswordEncoder();
+      }
+  
+  }
+  ```
+
+
+
+### 登录接口
+
+- 接下来我们需要自定义登陆接口，然后**让SpringSecurity对这个接口放行**,让用户访问这个接口的时候不用登录也能访问
+- 在接口中我们通过AuthenticationManager的authenticate方法来进行用户认证,所以需要在SecurityConfig中配置把AuthenticationManager注入容器。
+- 认证成功的话要生成一个jwt，放入响应中返回。并且为了让用户下回请求时能通过jwt识别出具体的是哪个用户，我们需要把用户信息存入redis，可以把用户id作为key。
+
+
+
+~~~~java
+@RestController
+public class LoginController {
+
+    @Autowired
+    private LoginServcie loginServcie;
+
+    @PostMapping("/user/login")
+    public ResponseResult login(@RequestBody User user){
+        return loginServcie.login(user);
+    }
+}
+~~~~
+
+~~~~java
+/**
+ * @Author 三更  B站： https://space.bilibili.com/663528522
+ */
+@Configuration
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
+    }
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+                //关闭csrf
+                .csrf().disable()
+                //不通过Session获取SecurityContext
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .and()
+                .authorizeRequests()
+                // 对于登录接口 允许匿名访问
+                .antMatchers("/user/login").anonymous()
+                // 除上面外的所有请求全部需要鉴权认证
+                .anyRequest().authenticated();
+    }
+
+    @Bean
+    @Override
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean();
+    }
+}
+~~~~
+
+​	
+
+~~~~java
+@Service
+public class LoginServiceImpl implements LoginServcie {
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
+    @Autowired
+    private RedisCache redisCache;
+
+    @Override
+    public ResponseResult login(User user) {
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(user.getUserName(),user.getPassword());
+        Authentication authenticate = authenticationManager.authenticate(authenticationToken);
+        if(Objects.isNull(authenticate)){
+            throw new RuntimeException("用户名或密码错误");
+        }
+        //使用userid生成token
+        LoginUser loginUser = (LoginUser) authenticate.getPrincipal();
+        String userId = loginUser.getUser().getId().toString();
+        String jwt = JwtUtil.createJWT(userId);
+        //authenticate存入redis
+        redisCache.setCacheObject("login:"+userId,loginUser);
+        //把token响应给前端
+        HashMap<String,String> map = new HashMap<>();
+        map.put("token",jwt);
+        return new ResponseResult(200,"登陆成功",map);
+    }
+}
+
+~~~~
+
+
+
+> 关于Redis：
+>
+> - 启动服务：redis-server.exe
+
+
+
+### 认证过滤器
+
+- 我们需要自定义一个过滤器，这个过滤器会：
+  1. 去获取请求头中的token，对token进行解析取出其中的userid。
+  2. 使用userid去redis中获取对应的LoginUser对象。
+  3. 然后封装Authentication对象存入SecurityContextHolder
+
+
+
+
+
+~~~~java
+@Component
+public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
+
+    @Autowired
+    private RedisCache redisCache;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        //获取token
+        String token = request.getHeader("token");
+        if (!StringUtils.hasText(token)) {
+            //放行
+            filterChain.doFilter(request, response);
+            return;
+        }
+        //解析token
+        String userid;
+        try {
+            Claims claims = JwtUtil.parseJWT(token);
+            userid = claims.getSubject();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("token非法");
+        }
+        //从redis中获取用户信息
+        String redisKey = "login:" + userid;
+        LoginUser loginUser = redisCache.getCacheObject(redisKey);
+        if(Objects.isNull(loginUser)){
+            throw new RuntimeException("用户未登录");
+        }
+        //存入SecurityContextHolder
+        //TODO 获取权限信息封装到Authentication中
+        UsernamePasswordAuthenticationToken authenticationToken =
+                new UsernamePasswordAuthenticationToken(loginUser,null,null);
+        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+        //放行
+        filterChain.doFilter(request, response);
+    }
+}
+~~~~
+
+~~~~java
+/**
+ * @Author 三更  B站： https://space.bilibili.com/663528522
+ */
+@Configuration
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
+    }
+
+
+    @Autowired
+    JwtAuthenticationTokenFilter jwtAuthenticationTokenFilter;
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+                //关闭csrf
+                .csrf().disable()
+                //不通过Session获取SecurityContext
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .and()
+                .authorizeRequests()
+                // 对于登录接口 允许匿名访问
+                .antMatchers("/user/login").anonymous()
+                // 除上面外的所有请求全部需要鉴权认证
+                .anyRequest().authenticated();
+
+        //把token校验过滤器添加到过滤器链中
+        http.addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
+    }
+
+    @Bean
+    @Override
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean();
+    }
+}
+
+~~~~
+
+
+
+### 退出登录
+
+```java
+/**
+ * @Author 三更  B站： https://space.bilibili.com/663528522
+ */
+@Service
+public class LoginServiceImpl implements LoginServcie {
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
+    @Autowired
+    private RedisCache redisCache;
+
+    @Override
+    public ResponseResult login(User user) {
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(user.getUserName(),user.getPassword());
+        Authentication authenticate = authenticationManager.authenticate(authenticationToken);
+        if(Objects.isNull(authenticate)){
+            throw new RuntimeException("用户名或密码错误");
+        }
+        //使用userid生成token
+        LoginUser loginUser = (LoginUser) authenticate.getPrincipal();
+        String userId = loginUser.getUser().getId().toString();
+        String jwt = JwtUtil.createJWT(userId);
+        //authenticate存入redis
+        redisCache.setCacheObject("login:"+userId,loginUser);
+        //把token响应给前端
+        HashMap<String,String> map = new HashMap<>();
+        map.put("token",jwt);
+        return new ResponseResult(200,"登陆成功",map);
+    }
+
+    @Override
+    public ResponseResult logout() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        LoginUser loginUser = (LoginUser) authentication.getPrincipal();
+        Long userid = loginUser.getUser().getId();
+        redisCache.deleteObject("login:"+userid);
+        return new ResponseResult(200,"退出成功");
+    }
+}
+```
+
+
+
+
+
+# 授权
+
+https://www.bilibili.com/video/BV1mm4y1X7Hc?p=24&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3
