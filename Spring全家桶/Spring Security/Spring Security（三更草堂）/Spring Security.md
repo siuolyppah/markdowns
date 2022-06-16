@@ -1200,8 +1200,25 @@ public class LoginServiceImpl implements LoginServcie {
 
 
 
+### 总结
+
+![登陆与访问资源的执行流](Spring%20Security.assets/%E7%99%BB%E9%99%86%E4%B8%8E%E8%AE%BF%E9%97%AE%E8%B5%84%E6%BA%90%E7%9A%84%E6%89%A7%E8%A1%8C%E6%B5%81.jpg)
+
 
 
 # 授权
 
-https://www.bilibili.com/video/BV1mm4y1X7Hc?p=24&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3
+## 授权基本流程
+
+- 在SpringSecurity中，会使用默认的`FilterSecurityInterceptor`来进行权限校验。
+
+  FilterSecurityInterceptor会从SecurityContextHolder获取其中的Authentication，然后获取其中的权限信息，并判断当前用户是否拥有访问当前资源所需的权限。
+
+
+
+步骤如下：
+
+1. 把当前登录用户的权限信息存入Authentication
+2. 设置资源所需要的权限
+
+[SpringSecurity框架教程-Spring Security+JWT实现项目级前端分离认证授权-B站最通俗易懂的Spring Security课程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1mm4y1X7Hc?p=26&vd_source=be746efb77e979ca275e4f65f2d8cda3)
