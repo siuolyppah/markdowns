@@ -1,3 +1,5 @@
+
+
 # 线程池
 
 ## 自定义线程池
@@ -862,11 +864,11 @@ public static void main(String[] args) {
 
 - 用 state 属性来表示资源的状态（分独占模式和共享模式），子类需要定义如何维护这个状态，控制如何获取锁和释放锁
 
-  - getState - 获取 state 状态
+  - getState() - 获取 state 状态
 
-  - setState - 设置 state 状态
+  - setState() - 设置 state 状态
 
-  - compareAndSetState - cas 机制设置 state 状态
+  - compareAndSetState() - cas 机制设置 state 状态
 
     > 注意：cas失败后，不会再次尝试，而是进入阻塞队列。
 
@@ -1035,11 +1037,137 @@ class MyLock implements Lock {
 
 ## ReentrantLock原理
 
-[黑马程序员全面深入学习Java并发编程，JUC并发编程全套教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV16J411h7Rd?p=238&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+![image-20220617141344775](JUC%E4%B9%8B%E5%B9%B6%E5%8F%91%E5%B7%A5%E5%85%B7.assets/image-20220617141344775.png)
 
 
 
+### 非公平锁的实现原理
 
+#### 加锁流程
+
+先从构造器开始看，默认为非公平锁实现：
+
+```JAVA
+public ReentrantLock() {
+    sync = new NonfairSync();
+}
+```
+
+
+
+非公平锁的加锁方法如下：
+
+```java
+final void lock() {
+    if (compareAndSetState(0, 1))
+        setExclusiveOwnerThread(Thread.currentThread());
+    else
+        acquire(1);
+}
+```
+
+- 没有竞争时：
+
+  ![image-20220617143311045](JUC%E4%B9%8B%E5%B9%B6%E5%8F%91%E5%B7%A5%E5%85%B7.assets/image-20220617143311045.png)
+
+- 出现竞争时：
+
+  ![image-20220617143318518](JUC%E4%B9%8B%E5%B9%B6%E5%8F%91%E5%B7%A5%E5%85%B7.assets/image-20220617143318518.png)
+
+  Thread-1的执行流程如下：
+
+  1. CAS 尝试将 state 由 0 改为 1，结果失败  
+
+  2. 进入 tryAcquire 逻辑，这时 state 已经是1，结果仍然失败  
+
+  3. 接下来进入 addWaiter 逻辑，构造 Node 队列  
+
+     - 图中黄色三角表示该 Node 的 waitStatus 状态，其中 0 为默认正常状态  
+     - Node 的创建是懒惰的
+     - 其中第一个 Node 称为 Dummy（哑元）或哨兵，用来占位，并不关联线程
+
+     ![image-20220617143631220](JUC%E4%B9%8B%E5%B9%B6%E5%8F%91%E5%B7%A5%E5%85%B7.assets/image-20220617143631220.png)
+
+  4. 进入 acquireQueued 逻辑：
+
+     1. acquireQueued 会在一个死循环中不断尝试获得锁，失败后进入 park 阻塞  
+     2. 如果自己是紧邻着 head（排第二位），那么再次 tryAcquire 尝试获取锁，当然这时 state 仍为 1，失败  
+     3. 进入 shouldParkAfterFailedAcquire 逻辑，将前驱 node，即 head 的 waitStatus 改为 -1，这次返回 false  
+
+     ![image-20220617144041792](JUC%E4%B9%8B%E5%B9%B6%E5%8F%91%E5%B7%A5%E5%85%B7.assets/image-20220617144041792.png)
+
+     1. shouldParkAfterFailedAcquire 执行完毕回到 acquireQueued ，再次 tryAcquire 尝试获取锁，当然这时
+        state 仍为 1，失败  
+     2. 当再次进入 shouldParkAfterFailedAcquire 时，这时因为其前驱 node 的 waitStatus 已经是 -1，这次返回
+        true  
+     3. 进入 parkAndCheckInterrupt， Thread-1 park（灰色表示）  
+
+     ![image-20220617144505280](JUC%E4%B9%8B%E5%B9%B6%E5%8F%91%E5%B7%A5%E5%85%B7.assets/image-20220617144505280.png)
+
+     
+
+若多个线程经历上述过程竞争失败,队列如下：
+
+![image-20220617144533144](JUC%E4%B9%8B%E5%B9%B6%E5%8F%91%E5%B7%A5%E5%85%B7.assets/image-20220617144533144.png)
+
+
+
+#### 解锁流程
+
+```java
+protected final boolean tryRelease(int releases) {
+    int c = getState() - releases;
+    if (Thread.currentThread() != getExclusiveOwnerThread())
+        throw new IllegalMonitorStateException();
+    boolean free = false;
+    if (c == 0) {
+        free = true;
+        setExclusiveOwnerThread(null);
+    }
+    setState(c);	// c此时必然是0
+    return free;
+}
+```
+
+
+
+Thread-0 释放锁，进入 tryRelease 流程，如果成功：
+
+- 设置 exclusiveOwnerThread 为 null
+- state = 0
+
+![image-20220617145523141](JUC%E4%B9%8B%E5%B9%B6%E5%8F%91%E5%B7%A5%E5%85%B7.assets/image-20220617145523141.png)
+
+当前队列不为 null，并且 head 的 waitStatus = -1，进入 unparkSuccessor 流程：
+
+找到队列中离 head 最近的一个 Node（没取消的），unpark 恢复其运行，本例中即为 Thread-1
+
+回到 Thread-1 的 acquireQueued 流程
+
+![image-20220617145738892](JUC%E4%B9%8B%E5%B9%B6%E5%8F%91%E5%B7%A5%E5%85%B7.assets/image-20220617145738892.png)
+
+如果加锁成功（没有竞争），会设置：
+
+- exclusiveOwnerThread 为 Thread-1，state = 1
+- head 指向刚刚 Thread-1 所在的 Node，该 Node 清空 Thread  
+- 原本的 head 因为从链表断开，而可被垃圾回收
+
+
+
+如果这时候有其它线程来竞争（**非公平的体现**），例如这时有 Thread-4 来了：
+
+![image-20220617145952984](JUC%E4%B9%8B%E5%B9%B6%E5%8F%91%E5%B7%A5%E5%85%B7.assets/image-20220617145952984.png)
+
+如果不巧被 Thread-4 占了先：
+
+- Thread-4 被设置为 exclusiveOwnerThread，state = 1
+- Thread-1 再次进入 acquireQueued 流程，获取锁失败，重新进入 park 阻塞
+
+
+
+### 可重入原理
+
+[黑马程序员全面深入学习Java并发编程，JUC并发编程全套教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV16J411h7Rd?p=242&vd_source=be746efb77e979ca275e4f65f2d8cda3)
 
 ## Lock
 
