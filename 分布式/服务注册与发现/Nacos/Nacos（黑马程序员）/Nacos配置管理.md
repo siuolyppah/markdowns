@@ -418,6 +418,8 @@ common:
 
 ## 登陆管理
 
+### 修改密码
+
 修改密码的流程如下：
 
 1. 引入加密工具类依赖：
@@ -455,6 +457,8 @@ common:
 
 
 
+### 关闭登录功能
+
 关闭登陆功能：
 
 由于部分公司自己开发控制台，不希望被nacos的安全filter拦截。因此nacos支持定制关闭登录功能找到配置文件
@@ -479,5 +483,510 @@ nacos.security.ignore.urls=/**
 
 # Nacos配置管理应用于分布式系统
 
-[Spring Cloud Alibaba Nacos配置中心与服务发现_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1VJ411X7xX?p=10&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+## 从单体架构到微服务
+
+### 单体架构
+
+Web应用程序发展的早期，大部分web工程师将所有的功能模块打包到一起并放在一个web容器中运行，所有功能
+模块使用同一个数据库，同时，它还提供API或者UI访问的web模块等。
+
+<img src="Nacos%E9%85%8D%E7%BD%AE%E7%AE%A1%E7%90%86.assets/image-20220617195404689.png" alt="image-20220617195404689" style="zoom:50%;" />
+
+尽管也是模块化逻辑，但是最终它还是会打包并部署为单体式应用，这种将**所有功能都部署在一个web容器**中运行
+的系统就叫做单体架构（也叫：巨石型应用）。  
+
+
+
+单体架构有很多好处：
+
+- 开发效率高：模块之间交互采用本地方法调用，并节省微服务之间的交互讨论时间与开发成本。
+- 容易测试：IDE都是为开发单个应用设计的、容易测试——在本地就可以启动完整的系统。
+- 容易部署：运维成本小，直接打包为一个完整的包，拷贝到web容器的某个目录下即可运行。
+
+
+
+但是，上述的好处是有条件的，它适用于小型简单应用，对于大规模的复杂应用，就会展现出来以下的不足：
+
+- 复杂性逐渐变高，可维护性逐渐变差 ：所有业务模块部署在一起，复杂度越来越高，修改时牵一发动全身。
+- 版本迭代速度逐渐变慢：修改一个地方就要将整个应用全部编译、部署、启动时间过长、回归测试周期过长。
+- 阻碍技术创新：若更新技术框架，除非你愿意将系统全部重写，无法实现部分技术更新。
+- 无法按需伸缩：通过冗余部署完整应用的方式来实现水平扩展，无法针对某业务按需伸缩。
+
+
+
+### 微服务
+
+- 许多大型公司，通过采用微服务架构解决了上述问题。其思路不是开发一个巨大的单体式的应用，而是将应用分解为小的、互相连接的微服务。
+
+- 一个微服务一般完成某个特定的功能，比如订单服务、用户服务等等。
+
+  **每一个微服务都是完整应用，都有自己的业务逻辑和数据库**。一些微服务还会发布API给其它微服务和应用客户端使用。
+
+
+
+比如，根据前面描述系统可能的分解如下：
+
+<img src="Nacos%E9%85%8D%E7%BD%AE%E7%AE%A1%E7%90%86.assets/image-20220617195619222.png" alt="image-20220617195619222" style="zoom:50%;" />
+
+每一个业务模块都使用独立的服务完成，这种微服务架构模式也影响了应用和数据库之间的关系，不像传统多个业务模块共享一个数据库，**微服务架构每个服务都有自己的数据库**。  
+
+
+
+微服务架构的好处：
+
+- 分而治之，职责单一；易于开发、理解和维护、方便团队的拆分和管理
+- 可伸缩；能够单独的对指定的服务进行伸缩
+- 局部容易修改，容易替换，容易部署，有利于持续集成和快速迭代
+- 不会受限于任何技术栈
+
+
+
+## Spring Cloud  与 Spring Cloud Alibaba  
+
+- Spring Cloud是一系列框架的有序集合。它利用Spring Boot的开发便利性巧妙地简化了分布式系统基础设施的开发，如服务发现注册、配置中心、消息总线、负载均衡、断路器、数据监控等，都可以用Spring Boot的开发风格做到一键启动和部署。
+
+- Spring Cloud Alibaba是阿里巴巴公司提供的开源的基于Spring cloud的微服务套件合集，它致力于提供微服务开发的一站式解决方
+  案。
+
+  > 可以理解为spring cloud是一套微服务开发的标准 ，spring cloud alibaba与spring cloud Netflix是实现。
+
+  使用 Spring Cloud Alibaba方案，开发者只需要添加一些注解和少量配置，就可以将 Spring Cloud 应用接入阿里分布式应用解决方案，通过阿里中间件来迅速搭建分布式应用系统。  
+
+
+
+以下将使用Spring Cloud Alibaba Nacos Config在Spring Cloud应用中集成Nacos。
+
+
+
+## 分布式应用配置管理  
+
+下图展示了如何通过Nacos集中管理多个服务的配置：
+
+![image-20220617195737451](Nacos%E9%85%8D%E7%BD%AE%E7%AE%A1%E7%90%86.assets/image-20220617195737451.png)
+
+- 用户**通过Nacos Server的控制台**，集中对多个服务的配置进行管理。
+- 各服务统一从Nacos Server中获取各自的配置，并监听配置的变化  
+
+
+
+### 1. 发布配置
+
+首先在nacos发布配置，我们规划了两个服务service1、service2，并且想对这两个服务的配置进行集中维护。
+
+1. 浏览器访问 http://127.0.0.1:8848/nacos ，打开nacos控制台，并点击菜单配置管理->配置列表
+
+2. 添加如下配置：
+
+   - service1
+
+     ```
+     Namespace: c67e4a97‐a698‐4d6d‐9bb1‐cfac5f5b51c4 #开发环境
+     Data ID: service1.yaml
+     Group : TEST_GROUP
+     配置格式: YAML
+     配置内容： 
+     common:
+     	name: service1 config
+     ```
+
+   - service2
+
+     ```
+     Namespace: c67e4a97‐a698‐4d6d‐9bb1‐cfac5f5b51c4 #开发环境
+     Data ID: service2.yaml
+     Group : TEST_GROUP
+     配置格式: YAML
+     配置内容： 
+     common:
+     	name: service2 config
+     ```
+
+
+
+### 创建父工程
+
+pom.xml如下：
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+            <version>2.1.0.RELEASE</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-dependencies</artifactId>
+            <version>Greenwich.RELEASE</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-dependencies</artifactId>
+            <version>2.1.3.RELEASE</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+```
+
+
+
+### 微服务service1配置
+
+- pom.xml如下：
+
+  ```xml
+  <parent>
+      <artifactId>nacos-simple-demo</artifactId>
+      <groupId>org.example</groupId>
+      <version>1.0-SNAPSHOT</version>
+  </parent>
+  <modelVersion>4.0.0</modelVersion>
+  
+  <artifactId>service1</artifactId>
+  
+  <name>service1</name>
+  
+  
+  <properties>
+      <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+      <maven.compiler.source>11</maven.compiler.source>
+      <maven.compiler.target>11</maven.compiler.target>
+  </properties>
+  
+  <dependencies>
+      <dependency>
+          <groupId>com.alibaba.cloud</groupId>
+          <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+      </dependency>
+      <dependency>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-web</artifactId>
+      </dependency>
+  </dependencies>
+  ```
+
+- 配置 **bootstrap**.yaml：
+
+  ```yaml
+  server:
+    port: 56010 #启动端口 命令行注入
+    
+  spring:
+    application:
+      name: service1
+    cloud:
+      nacos:
+        config:
+          server‐addr: localhost:8848 # 配置中心地址
+          file‐extension: yaml
+          namespace: 42019ee9-4c0b-4516-9831-8bd6d43b4f1c # 开发环境
+          group: TEST_GROUP # 测试组
+  ```
+
+  >- spring-cloud-starter-alibaba-nacos-config 在加载配置的时候：
+  >
+  >  dataid为：`${spring.application.name}.${file-extension:properties}` 的基础配置  
+  >
+  >- 若没有指定spring.cloud.nacos.config.group配置,则默认为DEFAULT_GROUP
+
+- 启动配置客户端：
+
+  ```java
+  @SpringBootApplication
+  public class Service1Bootstrap {
+      
+      public static void main(String[] args) {
+          SpringApplication.run(Service1Bootstrap.class, args);
+      } 
+  }
+  ```
+
+
+
+### 微服务service2配置
+
+- pom.xml如下：
+
+  ```xml
+  <parent>
+      <artifactId>nacos-simple-demo</artifactId>
+      <groupId>org.example</groupId>
+      <version>1.0-SNAPSHOT</version>
+  </parent>
+  <modelVersion>4.0.0</modelVersion>
+  
+  <artifactId>service2</artifactId>
+  
+  <name>service2</name>
+  
+  
+  <properties>
+      <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+      <maven.compiler.source>11</maven.compiler.source>
+      <maven.compiler.target>11</maven.compiler.target>
+  </properties>
+  
+  <dependencies>
+      <dependency>
+          <groupId>com.alibaba.cloud</groupId>
+          <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+      </dependency>
+      <dependency>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-web</artifactId>
+      </dependency>
+  </dependencies>
+  ```
+
+- 配置 **bootstrap**.yaml：
+
+  ```yaml
+  server:
+    port: 56020 #启动端口 命令行注入
+  
+  spring:
+    application:
+      name: service2
+    cloud:
+      nacos:
+        config:
+          server‐addr: localhost:8848 # 配置中心地址
+          file‐extension: yaml
+          namespace: 42019ee9-4c0b-4516-9831-8bd6d43b4f1c # 开发环境
+          group: TEST_GROUP # 测试组
+  ```
+
+- 启动配置客户端：
+
+  ```java
+  @SpringBootApplication
+  public class Service1Bootstrap {
+      
+      public static void main(String[] args) {
+          SpringApplication.run(Service1Bootstrap.class, args);
+      } 
+  }
+  ```
+
+  
+
+### 2. 获取配置
+
+```java
+@RestController
+public class ConfigController {
+
+    // 使用Value注解读取配置信息
+    @Value("${common.name}")
+    private String name;
+
+    @GetMapping("/configs")
+    public String getConfigs() {
+        return name;
+    }
+}
+```
+
+
+
+> 注意：
+>
+> - 当在控制台更改配置时，客户端将进行配置的更新。
+> - 但`@Value`注解比较特殊，不会进行变化。
+
+
+
+### 3. 配置的动态更新
+
+若要实现配置的动态更新，只需要进行如下改造：  
+
+```java
+@RestController
+public class ConfigController {
+
+    //    @Value("${common.name}")
+    //    private String name;
+    //
+    //    @GetMapping("/configs")
+    //    public String getConfigs() {
+    //        return name;
+    //    }
+
+    // 注入配置文件上下文
+    @Autowired
+    private ConfigurableApplicationContext applicationContext;
+
+    @GetMapping("/configs")
+    public String getConfigs() {
+        return applicationContext.getEnvironment().getProperty("common.name");
+    }
+}
+```
+
+
+
+>可通过配置spring.cloud.nacos.config.refresh.enabled=false，来关闭动态刷新
+
+
+
+### 扩展 Data Id 配置
+
+Spring Cloud Alibaba Nacos Config可支持自定义 Data Id 的配置，例如：
+```yaml
+server:
+  port: 56010 #启动端口 命令行注入
+
+spring:
+  application:
+    name: service1
+  cloud:
+    nacos:
+      config:
+        server‐addr: localhost:8848 # 配置中心地址
+        file‐extension: yaml
+        namespace: 42019ee9-4c0b-4516-9831-8bd6d43b4f1c # 开发环境
+        group: TEST_GROUP # 测试组
+        ext-config[0]:
+          data-id: ext-config-common01.properties # 默认的组 DEFAULT_GROUP,不支持配置的动态刷新
+        ext-config[1]:
+          data-id: ext-config-common02.properties # 组 GLOBALE_GROUP,不支持配置的动态刷新
+          group: GLOBALE_GROUP
+        ext‐config[2]:
+          data‐id: ext-config-common03.properties # 组 REFRESH_GROUP，支持动态刷新
+          group: REFRESH_GROUP
+          refresh: true
+```
+
+> 在进行拓展配置时，必须指定文件拓展名
+
+
+
+### 共享 Data Id 配置  
+
+yaml如下：
+
+```yaml
+spring:
+  cloud:
+    nacos:
+      config:
+        shared‐dataids: ext‐config‐common01.properties,ext‐config‐common02.properties
+        refreshable‐dataids: ext‐config‐common01.properties
+```
+
+
+
+> 共享 Data ID 配置，只有属于DEFAULT_GROUP的配置才生效。
+>
+> > 因此建议使用拓展 Data ID配置
+
+
+
+### 配置的优先级问题
+
+Spring Cloud Alibaba Nacos Config 目前提供了三种配置能力从 Nacos 拉取相关的配置。
+
+- A: 通过 `spring.cloud.nacos.config.shared-dataids` 支持多个共享 Data Id 的配置
+- B: 通过 `spring.cloud.nacos.config.ext-config[n].data-id` 的方式支持多个扩展 Data Id 的配置，多个Data Id 同时配置时，他的优先级关系是 `spring.cloud.nacos.config.ext-config[n].data-id` 其中 n 的值越大，优先级越高。
+
+- C: 通过内部相关规则(应用名、扩展名 )自动生成相关的 Data Id 配置（即项目本身的配置）
+
+当三种方式共同使用时，他们的一个优先级关系是:**C > B >A**
+
+> 优先级高的配置，将覆盖优先级低的配置
+
+
+
+### 完全关闭配置  
+
+通过设置 spring.cloud.nacos.config.enabled = false 来完全关闭 Spring Cloud Nacos Config
+
+
+
+## Nacos Server集群部署  
+
+### 集群部署
+
+3个或3个以上Nacos节点才能构成集群
+
+
+
+1. 安装3个以上Nacos
+
+   可以复制之前已经解压好的nacos文件夹，分别命名为nacos、nacos1、nacos2
+
+   >如果服务器有多个ip也要指定具体的ip地址，如：nacos.inetutils.ip-address=127.0.0.1
+   >
+   >```
+   >server.port=8850
+   >nacos.inetutils.ip‐address=127.0.0.1
+   >```
+
+2. 配置集群配置文件
+
+   在所有nacos目录的conf目录下，有文件 cluster.conf.example ，将其命名为 cluster.conf ，并将每行配置成
+   ip:port。（请配置3个或3个以上节点）
+
+   ```
+   # ip:port
+   127.0.0.1:8848
+   127.0.0.1:8849
+   127.0.0.1:8850
+   ```
+
+3. 集群模式启动
+
+   **分别执行**nacos目录的bin目录下的startup：
+
+   ```sh
+   startup ‐m cluster
+   ```
+
+   
+
+### 客户端配置
+
+yaml如下：
+
+```yaml
+spring:
+ application:
+  name: xxxx
+ cloud:
+  nacos:
+   config:
+    server‐addr: 127.0.0.1:8848,127.0.0.1:8849,127.0.0.1:8850
+```
+
+
+
+### 生产环境的部署建议
+
+- 下图是官方推荐的集群方案，通过域名 + VIP模式的方式来实现。
+
+  客户端配置的nacos，当Nacos集群迁移时，**客户端配置无需修改**。  
+
+![image-20220617221154513](Nacos%E9%85%8D%E7%BD%AE%E7%AE%A1%E7%90%86.assets/image-20220617221154513.png)
+
+
+
+至于数据库，生产环境下建议至少主备模式。通过修改${nacoshome}/conf/application.properties文件，能够使
+nacos拥有多个数据源。  
+
+```properties
+spring.datasource.platform=mysql
+
+db.num=2
+db.url.0=jdbc:mysql://127.0.0.1:3306/nacos_config?characterEncoding=utf8&autoReconnect=true
+db.url.1=jdbc:mysql://127.0.0.1:3306/nacos_config?characterEncoding=utf8&autoReconnect=true
+db.user=root
+db.password=root
+```
 
