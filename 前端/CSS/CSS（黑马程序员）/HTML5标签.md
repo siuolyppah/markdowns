@@ -45,4 +45,32 @@
 
 - `<audio>`：音频
 
-  [黑马程序员pink老师前端入门教程，零基础必看的h5(html5)+css3+移动端前端视频教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV14J4114768?p=277&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+  ```html
+  <audio src="" controls="controls"></audio>
+  ```
+  
+  ![image-20220617130016967](HTML5%E6%A0%87%E7%AD%BE.assets/image-20220617130016967.png)
+  
+  ![image-20220617125855919](HTML5%E6%A0%87%E7%AD%BE.assets/image-20220617125855919.png)
+
+
+
+## 新增input类型
+
+![image-20220617131528230](HTML5%E6%A0%87%E7%AD%BE.assets/image-20220617131528230.png)
+
+
+
+## 新增input表单属性
+
+![image-20220617131949648](HTML5%E6%A0%87%E7%AD%BE.assets/image-20220617131949648.png)
+
+
+
+修改placeholder的样式：
+```css
+input::placeholder{
+	...
+}
+```
+
