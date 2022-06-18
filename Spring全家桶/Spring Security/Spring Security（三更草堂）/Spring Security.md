@@ -1650,8 +1650,6 @@ RBAC权限模型（Role-Based Access Control）即：**基于角色的权限控�
     mapper-locations: classpath*:/mapper/**/*.xml 
   ```
 
-
-
 - 在UserDetailsServiceImpl中去调用该mapper的方法查询权限信息封装到LoginUser对象中：
 
   ```java
