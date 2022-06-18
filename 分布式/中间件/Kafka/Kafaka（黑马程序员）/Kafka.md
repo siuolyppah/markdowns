@@ -307,7 +307,7 @@ https://www.bilibili.com/video/BV19y4y1b7Uo?p=4&t=556.4
    done
    ```
    
-4. 编写start-kafka.sh脚本
+4. 编写stop-kafka.sh脚本
    ```sh
    vim stop-kafka.sh
    cat /export/onekey/slave | while read line
