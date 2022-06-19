@@ -480,8 +480,168 @@ module: {
 
 # 打包发布
 
-[黑马程序员Vue全套视频教程，从vue2.0到vue3.0一套全覆盖，前端必会的框架教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1zq4y1p7ga?p=23&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+## 为什么要打包发布
+
+项目开发完成之后，使用 webpack 对项目进行打包发布的主要原因有以下两点：  
+
+- 开发环境下，打包生成的文件存放于内存中，无法获取到最终打包生成的文件
+- 开发环境下，打包生成的文件不会进行代码压缩和性能优化
+
+  
+
+## 配置webpack的打包发布
+
+在 package.json 文件的 scripts 节点下，新增 build 命令如下：
+
+```json
+"scripts":{
+    "dev":"webpack serve",	// 开发环境
+    "build","webpack --mode production"	// 项目发布
+}
+```
+
+> --mode参数，将覆盖webpack.config.js中的mode选项
+
+
+
+## 将Javascript文件统一生成到js目录中
+
+在 webpack.config.js 配置文件的 output 节点中，进行如下的配置：  
+
+```js
+const  path =  require('path');
+output:{
+    path:path.join(__dirname,'dist'),
+	filename:'js/bundle.js'        
+}
+```
+
+
+
+## 把图片文件统一生成到 image 目录中  
+
+修改 webpack.config.js 中的 url-loader 配置项，新增 outputPath 选项即可指定图片文件的输出路径：  
+
+```js
+{
+    test:/\.jpg|png|gif$/,
+        use:{
+            loader:'url-loader',
+                options:{
+					limit:22228,
+outputPath:'image',
+                }
+        }
+}
+```
+
+
+
+## 自动清理 dist 目录下的旧文件  
+
+为了在每次打包发布时自动清理掉 dist 目录中的旧文件，可以安装并配置 clean-webpack-plugin 插件：  
+
+1. 安装插件：
+
+   ```sh
+   npm install clean-webpack-plugin@3.0.0 -D
+   ```
+
+2. webpack.config.js:
+
+   ```js
+   const {CleanWebpackPlugin} = require('clean-webpack-plugin');
+   const cleanPlugin = new CleanWebpackPlugin();
+   plugins:[htmlPlugin,cleanPlugin]
+   ```
+
+   
+
+## 企业级项目的打包发布
+
+企业级的项目在进行打包发布时，远比刚才的方式要复杂的多，主要的发布流程如下：
+
+1. 生成打包报告，根据报告分析具体的优化方案  
+2. Tree-Shaking  
+3. 为第三方库启用 CDN 加载  
+4. 配置组件的按需加载  
+5. 开启路由懒加载  
+6. 自定制首页内容  
 
 
 
 # Source Map
+
+## 生产环境遇到的问题
+
+前端项目在投入生产环境之前，都需要对 JavaScript 源代码进行压缩混淆，从而减小文件的体积，提高文件的加载效率。此时就不可避免的产生了另一个问题：
+
+对压缩混淆之后的代码除错（debug）是一件极其困难的事情
+
+- 变量被替换成没有任何语义的名称  
+- 空行和注释被剔除  
+
+![image-20220619140357138](%E5%89%8D%E7%AB%AF%E5%B7%A5%E7%A8%8B%E5%8C%96%E4%B8%8Ewebpack.assets/image-20220619140357138.png)
+
+
+
+## 什么是 Source Map
+
+- Source Map 就是一个信息文件，里面储存着位置信息。
+- 也就是说，Source Map 文件中存储着代码压缩混淆前后的对应关系。  
+
+- 有了它，出错的时候，除错工具将直接显示原始代码，而不是转换后的代码，能够极大的方便后期的调试  
+
+
+
+## webpack 开发环境下的 Source Map
+
+在开发环境下，webpack 默认启用了 Source Map 功能。当程序运行出错时，可以直接在控制台提示错误行的位置，并定位到具体的源代码：  
+
+![image-20220619140549513](%E5%89%8D%E7%AB%AF%E5%B7%A5%E7%A8%8B%E5%8C%96%E4%B8%8Ewebpack.assets/image-20220619140549513.png)
+
+
+
+## 默认 Source Map 的问题  
+
+开发环境下默认生成的 Source Map，记录的是**生成后的代码的位置**。会导致运行时报错的行数与源代码的行数不一致的问题。示意图如下：  
+
+![image-20220619140622960](%E5%89%8D%E7%AB%AF%E5%B7%A5%E7%A8%8B%E5%8C%96%E4%B8%8Ewebpack.assets/image-20220619140622960.png)
+
+
+
+## 解决默认 Source Map 的问题  
+
+- 开发环境下，推荐在 webpack.config.js 中添加如下的配置，即可保证运行时报错的行数与源代码的行数保持一致：
+
+![image-20220619140656371](%E5%89%8D%E7%AB%AF%E5%B7%A5%E7%A8%8B%E5%8C%96%E4%B8%8Ewebpack.assets/image-20220619140656371.png)
+
+
+
+- 生产环境下：
+
+  - 在生产环境下，如果省略了 devtool 选项，则最终生成的文件中不包含Source Map。这能够防止原始代码通过 Source Map 的形式暴露给别有所图之人。  
+
+    ![image-20220619140842371](%E5%89%8D%E7%AB%AF%E5%B7%A5%E7%A8%8B%E5%8C%96%E4%B8%8Ewebpack.assets/image-20220619140842371.png)
+
+  - 在生产环境下，如果只想定位报错的具体行数，且不想暴露源码。此时可以将 devtool 的值设置为nosources-source-map。实际效果如图所示： 
+
+    ![image-20220619140852617](%E5%89%8D%E7%AB%AF%E5%B7%A5%E7%A8%8B%E5%8C%96%E4%B8%8Ewebpack.assets/image-20220619140852617.png) 
+
+  - 如果想在定位报错行数的同时，展示具体报错的源码。此时可以将 devtool 的值设置为source-map。实际效果如图所示：  
+
+    ![image-20220619140915364](%E5%89%8D%E7%AB%AF%E5%B7%A5%E7%A8%8B%E5%8C%96%E4%B8%8Ewebpack.assets/image-20220619140915364.png)
+
+    >采用此选项后：你应该将你的服务器配置为，不允许普通用户访问source map 文件  
+
+
+
+## 最佳实践
+
+- 开发环境：
+
+  建议把 devtool 的值设置为 eval-source-map，从而精准定位到具体的错误行  
+
+- 生产环境：
+
+  建议关闭 Source Map 或将 devtool 的值设置为 nosources-source-map  
