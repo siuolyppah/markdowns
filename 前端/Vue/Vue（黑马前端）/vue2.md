@@ -538,4 +538,270 @@ vue 提供了 v-model 双向数据绑定指令，用来辅助开发者在不操�
 
 # 过滤器
 
+- 过滤器（Filters）是 vue 为开发者提供的功能，常**用于文本的格式化**。
+
+- 过滤器可以用在两个地方：**插值表达式**和 **v-bind 属性绑定**  
+
+- 使用“管道符” `|` 调用
+
+
+
+```html
+<div id="app">
+    <p>{{message | capitalize}}</p>
+    <div v-bind:id="rawId | formatId"></div>
+</div>
+
+<script src="./lib/vue.js"></script>
+<script>
+    new Vue({
+        el: "#app",
+        data: {
+            message: "abc",
+            rawId: 10,
+        },
+        filters: {
+            capitalize(val) {
+                return val.charAt(0).toUpperCase() + val.slice(1);
+            },
+            formatId(val) {
+                return "uid" + val;
+            }
+        }
+    });
+</script>
+```
+
+
+
+## 私有过滤器与全局过滤器
+
+- 私有过滤器：在vm实例的filters节点下定义的过滤器
+
+- 全局过滤器：多个Vue实例间共享
+
+  ```js
+  Vue.filter('capitalize',(str)=>{
+      return str.charAt(0).toUpperCase() + str.slice(1);
+  })
+  ```
+
+
+
+## 连续调用多个过滤器
+
+多个过滤器，可以**串联地**进行调用：
+
+```html
+<p>{{ message | filterA | filterB }}</p>
+```
+
+
+
+## 过滤器传参
+
+- 过滤器的本质为JS函数，可以接收参数
+
+  - 第一个参数：管道符前待处理的值
+
+  - 从第二个参数开始：才是调用过滤器时传递的参数
+
+    ```html
+    <p>{{ message | filterA(arg1,arg2)}}</p>
+    
+    <script>
+    	Vue.filter('filterA',(msg,arg1,arg2)=>{
+            ...
+        })
+    </script>
+    ```
+
+    
+
+## 过滤器的兼容性
+
+- 过滤器仅在 vue 2.x 和 1.x 中受支持，在 vue 3.x 的版本中剔除了过滤器相关的功能。
+
+- 如果项目已经升级到了 3.x 版本的 vue，官方建议**使用计算属性或方法**代替被剔除的过滤器功能  
+
+
+
 [黑马程序员Vue全套视频教程，从vue2.0到vue3.0一套全覆盖，前端必会的框架教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1zq4y1p7ga?p=64)
+
+
+
+# 侦听器
+
+[黑马程序员Vue全套视频教程，从vue2.0到vue3.0一套全覆盖，前端必会的框架教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1zq4y1p7ga?p=68&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+
+
+
+**watch 侦听器**允许开发者监视数据的变化，从而**针对数据的变化做特定的操作**。
+
+```html
+<div id="app">
+    <input type="text" v-model="username">
+</div>
+
+<script src="./lib/vue.js"></script>
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            username: '',
+        },
+        watch: {
+            username(newVal, oldVal) {
+                console.log(newVal, oldVal);
+            }
+        }
+    });
+</script>
+```
+
+
+
+## immediate 选项
+
+默认情况下，**组件在初次加载完毕后不会调用 watch 侦听器**。如果想让 watch 侦听器立即被调用，则需要使用 immediate 选项。
+
+示例代码如下：  
+
+```html
+<div id="app">
+    <input type="text" v-model="username">
+</div>
+
+<script src="./lib/vue.js"></script>
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            username: 'admin',
+        },
+        watch: {
+            username:{
+                handler: async function(newVal){
+                    if (newVal === '') return
+                    const { data: res } = await axios.get('https://www.escook.cn/api/finduser/' + newVal)
+                    console.log(res)
+                },
+                immediate: true // 表示页面初次渲染好之后，就立即触发当前的 watch 侦听器
+            }
+        }
+    });
+</script>
+```
+
+
+
+## deep选项
+
+如果 watch 侦听的是一个**对象**，如果对象中的属性值发生了变化，则无法被监听到。
+
+此时需要使用 deep 选项，代码示例如下： 
+
+```html
+<div id="app">
+    <input type="text" v-model="info.username">
+</div>
+
+<script src="./lib/vue.js"></script>
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            info: {
+                username: 'admin'
+            }
+        },
+        watch: {
+            info: {
+                handler(newVal) {
+                    console.log(newVal);
+                },
+                deep: true
+            }
+        }
+    });
+</script>
+```
+
+
+
+## 监听对象的某个属性的变化
+
+如果只想监听对象中单个属性的变化，则可以按照如下的方式定义 watch 侦听器：  
+
+```js
+new Vue({
+    el: '#app',
+    data: {
+        info: {username: 'admin'}
+    },
+    watch: {
+		'info.username':{
+            handler(newVal){
+                console.log(newVal)
+            }
+        }
+    }
+});
+```
+
+
+
+
+
+# 计算属性
+
+[黑马程序员Vue全套视频教程，从vue2.0到vue3.0一套全覆盖，前端必会的框架教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1zq4y1p7ga?p=73&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+
+- 计算属性：指的是通过一系列运算之后，最终得到一个**属性值**。
+- 这个动态计算出来的属性值可以被模板结构或 methods 方法使用。
+
+
+
+示例代码如下：  
+
+```html
+<div id="app">
+    <h3>{{rgb}}</h3>
+    r:<input type="text" v-model="r">
+    g:<input type="text" v-model="g">
+    b:<input type="text" v-model="b">
+</div>
+
+<script src="./lib/vue.js"></script>
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            r: 0, g: 0, b: 0
+        },
+        computed: {
+            rgb() {
+                return `rgb(${this.r},${this.g},${this.b})`
+            }
+        },
+        methods: {
+            show() {
+                console.log(this.rgb)   // 注意是属性，而非方法
+            }
+        }
+    });
+</script>
+```
+
+
+
+计算属性的特点：
+
+- 虽然计算属性在声明的时候被定义为方法，但是计算属性的本质是一个属性
+- 计算属性会缓存计算的结果，只有计算属性**依赖的数据变化时，才会重新进行运算**  
+
+
+
+# Axios
+
+[黑马程序员Vue全套视频教程，从vue2.0到vue3.0一套全覆盖，前端必会的框架教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1zq4y1p7ga?p=75&vd_source=be746efb77e979ca275e4f65f2d8cda3)
