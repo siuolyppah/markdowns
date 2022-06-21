@@ -182,4 +182,244 @@ vue create 项目名
 
 # 组件的props选项
 
-[黑马程序员Vue全套视频教程，从vue2.0到vue3.0一套全覆盖，前端必会的框架教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1zq4y1p7ga?p=95&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+props是组件的`自定义属性`，在`封装通用组件`时，合理地使用 props 可以极大的`提高组件的复用性`。
+
+
+
+## 语法
+
+```vue
+<script>
+export default {
+  props: ['自定义属性A', '自定义属性B', '自定义属性C'],  // 组件的自定义属性
+  data() {
+    return {};  // 组件的私有数据
+  }
+}
+</script>
+```
+
+
+
+> 注意：
+>
+> - 传入的**字符串**：
+>
+>   ```vue
+>   <Count init="1"></Count>
+>   ```
+>
+> - 结合v-bind指令：引号内为js表达式，因此传入的是**数值类型**：
+>
+>   ```vue
+>   <Count :init="1"></Count>
+>   ```
+
+
+
+## props是只读的
+
+vue 规定：组件中封装的自定义属性是只读的，程序员**不能直接修改 props 的值，否则会直接报错**。
+
+
+
+解决方式：
+
+- 将props的值，传入data属性中。
+
+  > 先解析props选项，后解析data选项
+
+  ```vue
+  <script>
+  export default {
+    name: "Count",
+    props: [
+      'init'
+    ],
+    data() {
+      return {
+        count: this.init,
+      }
+    },
+    methods: {
+      addCount() {
+        this.count++;
+      }
+    }
+  }
+  </script>
+  
+  使用者：
+  <Count init="1"></Count>
+  ```
+
+  
+
+## props的default选项
+
+可以通过default选项，来定义属性的默认值：
+```vue
+<script>
+    export default {
+        name: "Count",
+        props: {
+            'init': {
+                default: 0,
+            }
+        }
+    }
+</script>
+```
+
+
+
+> 若未设置默认值，且调用者未传入值，将为undefined
+
+
+
+## props的type选项
+
+- 可以通过 type 来定义属性的值类型。
+
+  如果传递过来的值不符合规则，将在终端报错
+
+- 示例代码如下：  
+
+  ```vue
+  <script>
+  export default {
+      props:{
+          init:{
+              default:0,
+              type:Number
+          }
+      }
+  }
+  </script>
+  ```
+
+  > 可选类型：
+  >
+  > - Number, Boolean, String, Array, Object,...
+
+
+
+## props的required选项
+
+- 在声明自定义属性时，可以通过 required 选项，将属性设置为必填项，强制用户必须传递属性的值。
+
+- 示例代码如下：
+
+  ```vue
+  <script>
+  export default {
+      props:{
+          init:{
+  			type: Number,
+              required: true
+          }
+      }
+  }
+  </script>
+  ```
+
+  
+
+## 组件之间的样式冲突问题
+
+- 默认情况下，**写在.vue组件中的样式会全局生效**。
+
+- 导致组件之间样式冲突的根本原因：
+
+  - 单页面应用程序。所有组件的DOM结构，都是基于唯一的index.html页面呈现的
+  - 每个组件的样式，都会影响整个index.html中DOM元素
+
+- 解决方案：
+
+  为**每个组件分配唯一的自定义属性**，在编写组件样式时，**通过属性选择器来控制样式的作用域**，示例代码如下：
+
+  ```vue
+  <template>
+    <div class="container" data-v-001>
+      <h3 data-v-001>轮播图组件</h3>
+    </div>
+  
+  </template>
+  
+  
+  <style>
+  .container[data-v-001]{
+    border: 1px solid red;
+  }
+  </style>
+  ```
+
+-  为了提高开发效率和开发体验，**vue 为 style 节点提供了 scoped 属性**，从而防止组件之间的样式冲突问题：  
+
+  ```vue
+  <template>
+    <div class="container">
+      <h3>轮播图组件</h3>
+    </div>
+  
+  </template>
+  
+  
+  <style scoped> 
+  /*
+    style节点的scoped属性，将为每仲组件分配唯一的“自定义属性”
+  */
+  .container {
+    border: 1px solid red;
+  }
+  </style>
+  ```
+
+  
+
+## /deep/ 样式穿透
+
+- 如果给当前组件的 style 节点添加了 scoped 属性，则**当前组件的样式**对其**子组件**是不生效的。
+
+- 如果想让某些样式**对子组件生效**，可以使用` /deep/ `深度选择器：
+
+  ```vue
+  <style scoped>
+      /* 生成的选择器格式为：.title[data-v-052242de] */
+      .title{
+          color:blue;
+      }
+      
+      /* 生成的选择器格式为： [data-v-052242de] .title*/
+      /deep/ .title{
+          color:blue;
+      }
+  </style>
+  ```
+
+> 使用场景：
+>
+> - 修改第三方组件库（如Vant、Elemnt-ui）的样式
+
+
+
+
+
+# 组件的生命周期
+
+## 组件实例
+
+>Vue项目运行的本质：
+>
+>1. 通过vue-template-compiler将所有的.vue文件，编译为JS代码
+>2. 由此JS代码操作DOM结构
+
+
+
+- 组件实例：即Vue构造函数创建的对象。
+  - Vue构造函数：对应着.vue文件
+  - Vue实例对象：\<Xxx>标签的一次引用，将创建一个对应的Vue实例
+
+
+
+## 生命周期 & 生命周期函数
