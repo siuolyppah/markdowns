@@ -516,4 +516,179 @@ SqlSession 提供：
 
 # 注解开发
 
-[2021最新Mybatis框架教程IDEA通俗易懂版_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1wy4y1H7wu?p=22&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+1. 在核心配置文件中配置mapper接口所在的包名：
+
+   ```xml
+   <mappers>
+       <package name="org.example.dao"/>
+   </mappers>
+   ```
+
+2. 在接口对应方法上使用注解来配置需要执行的sql：
+
+   ```java
+   public interface UserDao {
+   
+       // 此方法用mapper映射文件实现
+       List<User> findAll();
+   
+       @Select("select  * from user where id = #{id}")
+       User getUser(Integer id);
+   }
+   ```
+
+3. 获取Mapper代理对象，执行方法：
+
+   ```java
+   public class Demo {
+   
+       public static void main(String[] args) throws IOException {
+           String resource = "mybatis-config.xml";
+           InputStream inputStream = Resources.getResourceAsStream(resource);
+           SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(inputStream);
+   
+           try (SqlSession session = sqlSessionFactory.openSession()) {
+               UserDao userDao = session.getMapper(UserDao.class);
+   
+               User user = userDao.getUser(1);
+               System.out.println(user);
+           }
+       }
+   }
+   ```
+
+   
+
+# ResultMap
+
+## 基本使用
+
+可以使用resultMap标签自定义结果集和实体类属性的映射规则：
+
+```xml
+<!--
+        resultMap 用来自定义结果集和实体类的映射
+            属性：
+                id 相当于这个resultMap的唯一标识
+                type 用来指定映射到哪个实体类
+        id标签  用来指定主键列的映射规则
+            属性：
+                property 要映射的属性名
+                column  对应的列名
+        result标签 用来指定普通列的映射规则
+            属性：
+                property 要映射的属性名
+                column 对应的列名
+    -->
+<resultMap id="orderMap" type="com.sangeng.pojo.Order" >
+    <id column="id" property="id"></id>
+    <result column="createtime" property="createtime"></result>
+    <result column="price" property="price"></result>
+    <result column="remark" property="remark"></result>
+    <result column="user_id" property="userId"></result>
+</resultMap>
+
+<!--使用我们自定义的映射规则-->
+<select id="findAll" resultMap="orderMap">
+    SELECT id,createtime,price,remark,user_id  FROM ORDERS
+</select>
+```
+
+
+
+## 自动映射
+
+- 默认情况下自动映射是开启状态的。
+
+- 即如果结果集的列名，和属性名相同会自动映射。
+
+  只需写特殊情况的映射关系即可。
+
+```xml
+<resultMap id="orderMap" type="com.sangeng.pojo.Order" >
+    <result column="user_id" property="userId"></result>
+</resultMap>
+
+<!--使用我们自定义的映射规则-->
+<select id="findAll" resultMap="orderMap">
+    SELECT id,createtime,price,remark,user_id  FROM ORDERS
+</select>
+```
+
+
+
+以选择关闭自动映射可以把resultMap的autoMapping属性设置为false：
+
+```xml
+<resultMap id="xxx" type="xxx" autoMapping="false">
+    ...
+</resultMap>
+```
+
+
+
+# 结果封装
+
+## Association
+
+
+
+## Collection
+
+
+
+
+
+# Mybatis缓存
+
+Mybatis的缓存其实就是把之前查到的数据存入内存（map）,下次如果还是查相同的东西，就可以直接从缓存中取，从而提高效率。
+
+Mybatis有一级缓存和二级缓存之分：
+
+- 一级缓存（默认开启）是sqlsession级别的缓存。
+- 二级缓存相当于mapper级别的缓存。
+
+
+
+## 一级缓存
+
+几种不会使用一级缓存的情况：
+
+- 调用相同方法但是传入的参数不同
+- 调用相同方法参数也相同，但是使用的是另外一个SqlSession
+- 如果查询完后，对同一个表进行了增，删改的操作，都会清空这sqlSession上的缓存
+- 手动调用SqlSession的clearCache方法清除缓存
+
+
+
+## 二级缓存
+
+> ##### 💡注意
+>
+> 只有sqlsession调用了close或者commit后，数据才会进入二级缓存。
+
+
+
+### 开启二级缓存
+
+- 全局开启：
+
+  在Mybatis核心配置文件中配置：
+
+  ```xml
+  <settings>
+      <setting name="cacheEnabled" value="true"/>
+  </settings>
+  ```
+
+- 局部开启：
+
+  ```xml
+  <?xml version="1.0" encoding="UTF-8" ?>
+  <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+  <mapper namespace="com.sangeng.dao.RoleDao">
+      <cache></cache>
+  </mapper>
+  ```
+
+  
