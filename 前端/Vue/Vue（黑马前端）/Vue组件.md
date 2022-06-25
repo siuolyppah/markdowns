@@ -425,3 +425,339 @@ vue 规定：组件中封装的自定义属性是只读的，程序员**不能�
 ## 生命周期 & 生命周期函数
 
 [黑马程序员Vue全套视频教程，从vue2.0到vue3.0一套全覆盖，前端必会的框架教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1zq4y1p7ga?p=104&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+
+- 生命周期（Life Cycle）是指一个组件从创建 -> 运行 -> 销毁的整个阶段，强调的是一个时间段。
+- 生命周期函数：是由 vue 框架提供的内置函数，会伴随着组件的生命周期，自动按次序执行。
+
+>注意：生命周期强调的是**时间段**，生命周期函数强调的是**时间点**。  
+
+
+
+## 生命周期函数的分类
+
+![image-20220625185617425](Vue%E7%BB%84%E4%BB%B6.assets/image-20220625185617425.png)
+
+
+
+
+
+## 生命周期图示
+
+[Vue 实例 — Vue.js (vuejs.org)](https://cn.vuejs.org/v2/guide/instance.html)
+
+![lifecycle](Vue%E7%BB%84%E4%BB%B6.assets/lifecycle.png)
+
+
+
+# 组件的数据共享
+
+[黑马程序员Vue全套视频教程，从vue2.0到vue3.0一套全覆盖，前端必会的框架教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1zq4y1p7ga?p=110&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+
+
+
+## 组件之间的关系
+
+在项目开发中，组件之间的最常见的关系分为如下两种：
+
+- 父子关系
+- 兄弟关系
+
+![image-20220625193636951](Vue%E7%BB%84%E4%BB%B6.assets/image-20220625193636951.png)
+
+
+
+## 父子组件之间的数据共享
+
+父子组件之间的数据共享又分为：
+
+- 父 -> 子共享数据
+- 子 -> 父共享数据  
+
+
+
+### 父组件 -数据> 子组件
+
+需要**在子组件中**，使用**自定义属性**。
+
+- 父组件：
+
+  ```vue
+  <template>
+    <div>
+      <Son :msg="message"></Son>
+    </div>
+  </template>
+  
+  <script>
+  import Son from "@/components/Son";
+  
+  export default {
+    name: 'Father',
+    data() {
+      return {
+        message:"hello vue.js"  
+      }
+    },
+    components: {
+      Son
+    }
+  }
+  </script>
+  ```
+
+- 子组件：
+
+  ```vue
+  <template>
+    <div>
+      <h5>Son 组件</h5>
+      <p>父组件传递的msg：{{ msg }}</p>
+    </div>
+  </template>
+  
+  <script>
+  export default {
+    name: "Son",
+    props: ['msg']
+  }
+  </script>
+  ```
+
+  
+
+### 子组件 -数据> 父组件
+
+需要**在父组件**中，使用**自定义事件**
+
+![image-20220625195648092](Vue%E7%BB%84%E4%BB%B6.assets/image-20220625195648092.png)
+
+
+
+- 父组件：
+
+  ```vue
+  <template>
+    <!--父组件-->
+    <div id="app">
+      <h3>父组件当前Count值为：{{ countFromSon }}</h3>
+      <Son @numChange="getNewCount"></Son>
+    </div>
+  </template>
+  
+  <script>
+  import Son from "@/components/Son";
+  
+  export default {
+    name: 'App',
+    data() {
+      return {
+        countFromSon: 0
+      }
+    },
+    methods: {
+      getNewCount(val) {
+        this.countFromSon = val
+      }
+    },
+    components: {
+      Son
+    }
+  }
+  </script>
+  ```
+
+- 子组件：
+
+  ```vue
+  <template>
+    <div>
+      <h5>Son 组件，当前Count值为：{{ count }}</h5>
+      <button @click="add">+1</button>
+    </div>
+  </template>
+  
+  <script>
+  export default {
+    name: "Son",
+    data() {
+      return {
+        count: 0
+      }
+    },
+    methods: {
+      add() {
+        this.count += 1
+        // 通过 $emit() 触发自定义事件
+        this.$emit('numChange', this.count)
+      }
+    }
+  }
+  </script>
+  ```
+
+
+
+## 兄弟组件之间的数据共享
+
+在 vue2.x 中，兄弟组件之间数据共享的方案是 EventBus。
+
+![image-20220625200108437](Vue%E7%BB%84%E4%BB%B6.assets/image-20220625200108437.png)
+
+EventBus的使用步骤如下：
+
+1. 创建 eventBus.js 模块，并向外**共享一个 Vue 的实例对象**
+2. 在数据**发送方**，调用` bus.$emit`('事件名称', 要发送的数据) 方法**触发自定义事件**
+3. 在数据**接收方**，调用 `bus.$on`('事件名称', 事件处理函数) 方法**注册一个自定义事件**
+
+
+
+# ref引用
+
+## 什么是ref引用
+
+- ref 用来辅助开发者在不依赖于 jQuery 的情况下，获取 DOM 元素或组件的引用
+- 每个 vue 的组件实例上，都包含一个 `$refs` 对象，里面存储着对应的 DOM 元素或组件的引用。
+- 默认情况下，组件的 `$refs` 指向一个空对象。  
+
+
+
+## 使用ref引用Dom元素
+
+```vue
+<template>
+  <div>
+    <h3 ref="myh3">被引用的DOM元素</h3>
+    <button @click="changeColor">change color</button>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'App',
+  methods: {
+    changeColor() {
+      this.$refs.myh3.style.color = 'red'
+    }
+  }
+}
+</script>
+```
+
+
+
+## 使用ref引用Vue组件实例
+
+> 在获取到Vue组件实例后，就可以调用该实例上的methods方法
+
+
+
+- Test.vue：
+
+  ```vue
+  <template>
+    <div>
+      <h3>Count值为：{{ count }}</h3>
+    </div>
+  </template>
+  
+  <script>
+  export default {
+    name: "test",
+    data() {
+      return {
+        count: 0
+      }
+    },
+    methods: {
+      addCount() {
+        this.count++
+      }
+    }
+  }
+  </script>
+  
+  ```
+
+- App.vue：
+
+  ```vue
+  <template>
+    <div id="app">
+      <Test ref="testRef"></Test>
+      <button @click="triggerAddCount">click</button>
+    </div>
+  </template>
+  
+  <script>
+  import Test from "@/components/Test";
+  
+  export default {
+    name: 'App',
+    components: {
+      Test
+    },
+    methods: {
+      triggerAddCount() {
+        this.$refs.testRef.addCount()
+      }
+    }
+  }
+  </script>
+  ```
+
+  
+
+## this.$nextTick(cb) 方法
+
+组件的 $nextTick(cb) 方法，会把 cb 回调推迟到下一个 DOM 更新周期之后执行
+
+> cb即CallBack，回调函数
+
+> 可以通俗的理解为：
+>
+> - 等组件的DOM 更新完成之后，再执行 cb 回调函数
+> - 从而能保证 cb 回调函数可以操作到最新的 DOM 元素。  
+
+
+
+案例：
+
+```vue
+<template>
+  <div id="app">
+    <input type="text" v-if="inputVisible" ref="ipt">
+    <button @click="showInput">展示Input框</button>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'App',
+  data() {
+    return {
+      inputVisible: false
+    }
+  },
+  methods: {
+    showInput() {
+      this.inputVisible = true
+
+      // 把对Input框的操作，推迟到下次DOM更新之后。否则此时页面中根本不存在Input元素
+      this.$nextTick(() => {
+        this.$refs.ipt.focus()
+      })
+    }
+  }
+}
+</script>
+```
+
+
+
+> updated生命周期钩子也可实现此业务逻辑
+
+
+
+# 动态组件
+
+[黑马程序员Vue全套视频教程，从vue2.0到vue3.0一套全覆盖，前端必会的框架教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1zq4y1p7ga?p=146&vd_source=be746efb77e979ca275e4f65f2d8cda3)
