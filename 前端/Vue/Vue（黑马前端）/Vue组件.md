@@ -761,3 +761,398 @@ export default {
 # 动态组件
 
 [黑马程序员Vue全套视频教程，从vue2.0到vue3.0一套全覆盖，前端必会的框架教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1zq4y1p7ga?p=146&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+
+动态组件，指的是**动态切换组件的显示与隐藏**。  
+
+
+
+## 语法
+
+使用Vue提供的`<component>`，并为其添加`is`属性。
+
+```vue
+<template>
+  <div>
+      <component is="Count"></component>
+  </div>
+</template>
+
+<script>
+import Count from "@/components/Count";
+
+export default {
+  name: 'App',
+  components:{
+    Count
+  }
+}
+</script>
+```
+
+
+
+## 使用keep-alive保持状态
+
+- 在默认情况下，当切换动态组件时，旧组件将被销毁，新组件将被创建。
+
+- 此时可以使用 vue 内置的 `<keep-alive> `组件保持动态组
+  件的状态。
+
+  
+
+示例代码如下：  
+
+```vue
+<template>
+  <div id="app">
+    <button @click="change">click to change</button>
+    <keep-alive>
+      <component :is="compName"></component>
+    </keep-alive>
+  </div>
+</template>
+
+<script>
+import Count from "@/components/Count";
+
+export default {
+  name: 'App',
+  components: {
+    Count
+  },
+  data() {
+    return {
+      compName: 'Count'
+    };
+  },
+  methods: {
+    change() {
+      if (this.compName === 'Count') {
+        this.compName = ''
+      } else {
+        this.compName = 'Count'
+      }
+    }
+  }
+}
+</script>
+```
+
+
+
+## keep-alive 对应的生命周期函数
+
+- 当组件被**缓存**时，会自动触发组件的 deactivated 生命周期函数。
+- 当组件被**激活**时，会自动触发组件的 activated 生命周期函数。  
+
+> 注意：
+>
+> 当组件第一次被创建时，将先后触发created和actived生命周期钩子
+
+
+
+## keep-alive 的 include 属性 
+
+- include 属性用来指定：只有**名称匹配**的组件会被缓存
+- 多个组件名之间使用英文的逗号分隔
+
+```vue
+<keep-alive include="MyLeft,MyRight"> <!-- 注意是组件的注册名称 -->
+	<component :is="compName"></component>
+</keep-alive>
+```
+
+
+
+> - 对应的，`exclude`属性用于指定不进行缓存的组件
+> - include和exclude属性，只能同时指定一个
+
+
+
+# 插槽 Slot
+
+- 插槽（Slot）是 vue 为组件的封装者提供的能力。
+
+- 允许开发者在封装组件时，把不确定的、希望由用户指定的部分定义为插槽。  
+
+  >可以把插槽认为是组件封装期间，为用户预留的内容的占位符。  
+
+![image-20220626201647788](Vue%E7%BB%84%E4%BB%B6.assets/image-20220626201647788.png)
+
+
+
+## 插槽的基本用法
+
+- 封装了插槽的组件（提供插槽者）：
+
+  ```vue
+  <template>
+    <div>
+      <p>以下是插槽内容：</p>
+      <slot></slot>
+    </div>
+  </template>
+  
+  <script>
+  export default {
+    name: "test",
+  }
+  </script>
+  ```
+
+- 使用者：
+
+  ```vue
+  <template>
+    <div id="app">
+      <Test>
+        <h1>此处内容将被放入插槽</h1>
+      </Test>
+    </div>
+  </template>
+  
+  <script>
+  import Test from "@/components/Test";
+  
+  export default {
+    name: 'App',
+    components:{
+      Test
+    }
+  }
+  </script>
+  ```
+
+  
+
+## 没有预留插槽的内容会被丢弃
+
+如果在封装组件时<span style="color:#c20200;">没有预留任何 \<slot> 插槽</span>，则用户提供的任何<span style="color:#c20200;">自定义内容都会被丢弃</span>。示例代码如下：  
+
+- 封装者：
+
+  ```vue
+  <template>
+  	<p>此组件没有插槽</p>
+  </template>
+  ```
+
+- 使用者：
+
+  ```vue
+  <template>
+  	<Test>
+      	<p>用户自定义内容</p> <!-- 将被丢弃 -->
+      </Test>
+  </template>
+  ```
+
+  
+
+## 后备内容
+
+- 封装组件时，可以为预留的 `<slot>` 插槽提供后备内容（默认内容）。
+- 如果组件的使用者没有为插槽提供任何内容，则后备内容会生效。
+
+
+
+示例代码如下：  
+
+```vue
+<template>
+	<p>以下插槽内容：</p>
+	<slot>此为后备内容</slot>
+</template>
+```
+
+
+
+## 具名插槽
+
+- 如果在封装组件时**需要预留多个插槽节点**，则**需要为每个 `<slot>` 插槽指定具体的 name 名称**。
+- 这种带有具体名称的插槽叫做“具名插槽”。
+
+
+
+示例代码如下  ：
+
+- 提供者：
+
+  ```vue
+  <template>
+    <div class="container">
+      <header>
+        <slot name="header"></slot>
+      </header>
+  
+      <main>
+        <slot></slot>
+      </main>
+  
+      <footer>
+        <slot name="footer"></slot>
+      </footer>
+    </div>
+  </template>
+  
+  <script>
+  export default {
+    name: "test",
+  }
+  </script>
+  ```
+
+- 使用者：
+
+  在`<template>`元素上，使用`v-slot`指令，其后跟着插槽的name。
+
+  ```vue
+  <template>
+    <div id="app">
+      <Test>
+        <template v-slot:header>
+          <h1>标题内容</h1>
+        </template>
+  
+        <template v-slot:default>
+          中心内容
+        </template>
+  
+        <template v-slot:footer>
+          底部内容
+        </template>
+      </Test>
+    </div>
+  </template>
+  
+  <script>
+  import Test from "@/components/Test";
+  
+  export default {
+    name: 'App',
+    components: {
+      Test
+    }
+  }
+  </script>
+  ```
+
+  >没有指定name名称的插槽，会有隐含的name值：“default”
+
+  > 具名插槽的简写形式：
+  >
+  > - 将参数之前的所有内容（即v-slot:）简写为#。
+  >
+  >   即 v-slot:header，可以简记为#header
+  >
+  >   ```vue
+  >   <template #header>...</template>
+  >   ```
+
+
+
+## 作用域插槽
+
+- 在封装组件的过程中，可以为预留的 `<slot>` 插槽绑定 props 数据。
+
+  这种带有 props 数据的 \<slot> 叫做“作用域插槽”  
+
+
+
+- 提供插槽的组件：
+
+  ```vue
+  <template>
+    <div>
+      <h3>以下为插槽</h3>
+      <slot msg="hello,vue.js"></slot>
+    </div>
+  </template>
+  
+  <script>
+  export default {
+    name: "test",
+  }
+  </script>
+  ```
+
+- 使用插槽的组件：
+
+  父组件将获得一个对象，在该对象中保存了子组件在插槽中定义的属性
+
+  ```vue
+  <template>
+    <div id="app">
+      <Test>
+        <template v-slot:default="obj">
+          父组件获得到：{{ obj.msg }}
+        </template>
+      </Test>
+    </div>
+  </template>
+  
+  <script>
+  import Test from "@/components/Test";
+  
+  export default {
+    name: 'App',
+    components: {
+      Test
+    }
+  }
+  </script>
+  ```
+
+  
+
+## 作用域插槽的解构赋值
+
+- 提供者：
+
+  ```vue
+  <template>
+    <div>
+      <h3>以下为插槽</h3>
+      <slot msg="hello,vue.js" author="me"></slot>
+    </div>
+  </template>
+  
+  <script>
+  export default {
+    name: "test",
+  }
+  </script>
+  ```
+
+- 使用者：
+
+  ```vue
+  <template>
+    <div id="app">
+      <Test>
+        <template v-slot:default="{msg,author}"> <!-- 此处使用解构赋值-->
+          {{ msg }},{{ author }}
+        </template>
+      </Test>
+    </div>
+  </template>
+  
+  <script>
+  import Test from "@/components/Test";
+  
+  export default {
+    name: 'App',
+    components: {
+      Test
+    }
+  }
+  </script>
+  ```
+
+
+
+# 自定义指令
+
+[黑马程序员Vue全套视频教程，从vue2.0到vue3.0一套全覆盖，前端必会的框架教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1zq4y1p7ga?p=160&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+
+day5
