@@ -1155,4 +1155,252 @@ export default {
 
 [黑马程序员Vue全套视频教程，从vue2.0到vue3.0一套全覆盖，前端必会的框架教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1zq4y1p7ga?p=160&vd_source=be746efb77e979ca275e4f65f2d8cda3)
 
-day5
+
+
+vue 中的自定义指令分为两类，分别是：
+
+- 私有自定义指令
+- 全局自定义指令
+
+
+
+## 私有自定义指令
+
+在每个 vue 组件中，可以在 directives 节点下声明私有自定义指令。示例代码如下：  
+
+```vue
+<template>
+  <div id="app">
+    <h1 v-red>APP根组件</h1>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'App',
+  directives: {
+    red: {
+      bind(el) {  // el形参，为绑定此指令的原生DOM对象
+        el.style.color = 'red'
+      }
+    }
+  }
+}
+</script>
+```
+
+ 
+
+> 在声明自定义指令时，可以通过形参的第二个参数（对象类型），来接收指令的参数值。
+
+
+
+- bind函数：
+
+  bind 函数只调用 1 次：当指令第一次绑定到元素时调用，当 DOM 更新时 bind 函数不会被触发  
+
+- update函数：
+
+  update 函数会在每次 DOM 更新时被调用
+
+
+
+## 全局自定义指令
+
+全局共享的自定义指令需要通过“`Vue.directive()`”进行声明，示例代码如下：  
+
+main.js：
+
+```js
+Vue.directive('red',{
+  bind(el) {  // el形参，为绑定此指令的原生DOM对象
+    el.style.color = 'red'
+  }
+})
+```
+
+
+
+# 路由Router
+
+## SPA与前端路由
+
+- SPA：单页面应用，所有组件的展示与切换，都在唯一一个html中完成
+- 在SPA项目中，想要实现根据请求地址，动态切换功能页面，需要使用前端路由
+
+
+
+即**前端路由**：**Hash地址**（锚链接，形如#/home）与**组件**的对应关系。
+
+> 锚链接，不会引起页面刷新，但会产生浏览历史
+
+
+
+## 前端路由的工作方式
+
+1. 用户点击页面上的路由链接
+2. URL地址栏的Hash值发生变化
+3. **前端路由监测到Hash值变化**
+4. 前端路由将当前Hash地址对应的组件，进行渲染
+
+![image-20220627211342153](Vue%E7%BB%84%E4%BB%B6.assets/image-20220627211342153.png)
+
+
+
+`````vue
+<template>
+  <div id="app">
+    <a href="#/home">Home</a>
+    <a href="#/test">Test</a>
+
+    <component :is="hash"></component>
+  </div>
+</template>
+
+<script>
+import Home from "@/components/Home";
+import Test from "@/components/Test";
+
+export default {
+  name: 'App',
+  components: {
+    Home,
+    Test
+  },
+  data() {
+    return {
+      hash: 'Home'
+    }
+  },
+  created() {
+    window.onhashchange = () => {
+      switch (location.hash) {
+        case '#/home':
+          this.hash = 'Home'
+          break
+        case '#/test':
+          this.hash = 'Test'
+          break
+      }
+    }
+  }
+}
+</script
+`````
+
+
+
+## vue-router
+
+vue-router 是 vue.js 官方给出的路由解决方案。它只能结合 vue 项目进行使用，能够轻松的管理 SPA 项目中组件的切换。  
+
+vue-router 的官方文档地址：https://router.vuejs.org/zh/  
+
+
+
+### vue-router的基本使用
+
+1. 安装vue-router包
+
+   ```sh
+   npm i vue-router@3.5.2 -S
+   ```
+
+2. 创建路由模块：
+
+   在src目录下，新建`router/index.js`路由模块：
+
+   ```js
+   import Vue from "vue";
+   import VueRouter from "vue-router";
+   
+   // 为Vue安装插件
+   Vue.use(VueRouter)
+   
+   const router = new VueRouter()
+   
+   export default router	
+   ```
+
+3. 导入并挂载路由模块：
+
+   在src/`main.js`入口文件中：
+
+   ```js
+   import router from "@/router";	// 若只给出路径，则默认加载路径下的index.js
+   
+   new Vue({
+       render: h => h(App),
+       router: router
+   }).$mount('#app')
+   ```
+
+4. 在src/App.vue组件中，使用vue-router提供的`<router-link>`和`<router-view>`声明路由链接和占位符：
+
+   ```vue
+   <template>
+     <div class="app-container">
+       <h1>App 根组件</h1>
+   
+       <!-- 定义路由链接 -->
+       <router-link to="/home">首页</router-link>
+       <router-link to="/movie">电影</router-link>
+       <router-link to="/about">关于</router-link>
+       <hr />
+   
+       <!-- 声明路由的占位符 -->
+       <router-view></router-view>
+       
+     </div>
+   </template>
+   
+   <script>
+   import Home from '@/components/Home.vue'
+   import Movie from '@/components/Movie.vue'
+   import About from '@/components/About.vue'
+   
+   export default {
+     name: 'App',
+     components: {
+       Home,
+       Movie,
+       About
+     }
+   }
+   </script>
+   ```
+
+2. 声明路由的匹配规则：
+
+   在 src/router/index.js 路由模块中，通过 `routes 数组`声明路由的匹配规则：
+
+   ```js
+   import Vue from "vue";
+   import VueRouter from "vue-router";
+   import Home from "@/components/Home";
+   import Movie from "@/components/Movie";
+   import About from "@/components/About";
+   
+   Vue.use(VueRouter)
+   
+   const router = new VueRouter({
+       routes: [
+           {path: '/home', component: Home},
+           {path: '/movie', component: Movie},
+           {path: '/about', component: About},
+       ]
+   })
+   
+   export default router
+   ```
+
+   
+
+> 完整案例：见附件“router-demo-quick.zip”
+
+
+
+### vue-router的常见用法
+
+- day7
+- [黑马程序员Vue全套视频教程，从vue2.0到vue3.0一套全覆盖，前端必会的框架教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1zq4y1p7ga?p=181&vd_source=be746efb77e979ca275e4f65f2d8cda3)
