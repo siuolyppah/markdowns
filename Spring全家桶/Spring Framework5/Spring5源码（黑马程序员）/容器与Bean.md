@@ -156,3 +156,196 @@
 ## ApplicationContext
 
 [黑马程序员Spring视频教程，全面深度讲解spring5底层原理_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1P44y1N7QG?p=11&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+
+用作准备：
+
+- Bean1.java：
+
+  ```java
+  public class Bean1 {
+  }
+  ```
+
+- Bean2.java：
+
+  ```java
+  @Getter
+  @Setter
+  public class Bean2 {
+  
+      private Bean1 bean1;
+  }
+  ```
+
+- b01.xml：
+
+  ```xml
+  <?xml version="1.0" encoding="UTF-8"?>
+  <beans xmlns="http://www.springframework.org/schema/beans"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+  
+      <bean id="bean1" class="com.example.show.lecture2.Bean1"/>
+      <bean id="bean2" class="com.example.show.lecture2.Bean2">
+          <property name="bean1" ref="bean1"/>
+      </bean>
+  
+  </beans>
+  ```
+
+
+
+### ClassPathXmlApplicationContext
+
+作用：从类路径下，读取xml配置文件。
+
+
+
+测试类：
+```java
+public class ClassPathXmlApplicationContextTest {
+
+    public static void main(String[] args) {
+        ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("lecture2/b01.xml");
+
+        Arrays.stream(context.getBeanDefinitionNames()).forEach(System.out::println);   // Bean1,Bean2
+
+        System.out.println(context.getBean(Bean2.class).getBean1());    // com.example.show.lecture2.Bean1@58cbafc2
+    }
+}
+```
+
+
+
+### FileSystemXmlApplicationContext
+
+从磁盘路径下，读取xml配置文件。
+
+
+
+测试类：
+
+```java
+public class FileSystemXmlApplicationContextTest {
+
+    public static void main(String[] args) {
+        FileSystemXmlApplicationContext context = new FileSystemXmlApplicationContext("D:\\idea_workspace\\b01.xml");
+
+        Arrays.stream(context.getBeanDefinitionNames()).forEach(System.out::println);   // Bean1,Bean2
+
+        System.out.println(context.getBean(Bean2.class).getBean1());    // com.example.show.lecture2.Bean1@75d3a5e0
+    }
+}
+```
+
+
+
+#### 基于XML的ApplicationContenxt原理
+
+```java
+public class XMLApplicationContextPrinciple {
+
+    public static void main(String[] args) {
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+
+        XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(beanFactory);
+        reader.loadBeanDefinitions(new ClassPathResource("lecture2/b01.xml"));  // 或FileSystemResource
+        
+        Arrays.stream(beanFactory.getBeanDefinitionNames()).forEach(System.out::println);   // bean1,bean2
+        System.out.println(beanFactory.getBean(Bean2.class).getBean1());    // com.example.show.lecture2.Bean1@41fecb8b
+    }
+}
+```
+
+
+
+> 注意：
+>
+> 基于XML的Spring容器，需要在配置文件中添加`<context:annotation-config />`标签，从而添加Bean后处理器和Bean工厂后处理器
+
+
+
+### AnnotationConfigApplicationContext
+
+测试类：
+
+```java
+public class AnnotationConfigApplicationContextTest {
+
+    public static void main(String[] args) {
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext(Config.class);
+
+        Arrays.stream(context.getBeanDefinitionNames()).forEach(System.out::println);   // Config,Bean1,Bean2
+
+        System.out.println(context.getBean(Bean2.class).getBean1());    // com.example.show.lecture2.Bean1@25df00a0
+    }
+
+    @Configuration
+    static class Config {
+        @Bean
+        public Bean1 bean1() {
+            return new Bean1();
+        }
+
+        @Bean
+        Bean2 bean2(Bean1 bean1) {
+            Bean2 bean2 = new Bean2();
+            bean2.setBean1(bean1);
+            return bean2;
+        }
+    }
+}
+```
+
+
+
+### AnnotationConfigServletWebServerApplicationContext
+
+测试类：
+
+```java
+public class AnnotationConfigServletWebServerApplicationContextTest {
+
+    public static void main(String[] args) {
+        AnnotationConfigServletWebServerApplicationContext context =
+                new AnnotationConfigServletWebServerApplicationContext(WebConfig.class);
+    }
+
+    @Configuration
+    static class WebConfig {
+        // 相较于单纯的注解容器，需要配置一些额外信息：
+        // WebServer：配置它的工厂类
+        // DispatcherServlet
+        // 将DispatcherServlet注册到WebServer中
+        @Bean
+        public ServletWebServerFactory servletWebServerFactory() {
+            return new TomcatServletWebServerFactory();
+        }
+
+        @Bean
+        public DispatcherServlet dispatcherServlet() {
+            return new DispatcherServlet();
+        }
+
+        @Bean
+        public DispatcherServletRegistrationBean registrationBean(DispatcherServlet dispatcherServlet) {
+            return new DispatcherServletRegistrationBean(dispatcherServlet, "/");
+        }
+
+        @Bean("/hello") // 控制器Demo，其访问路径为/hello
+        public Controller controller1() {
+            return (request, response) -> {
+                response.getWriter().print("hello");
+                return null;
+            };
+        }
+    }
+}
+```
+
+
+
+# Bean的生命周期
+
+[黑马程序员Spring视频教程，全面深度讲解spring5底层原理_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1P44y1N7QG?p=13&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)
