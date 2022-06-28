@@ -1402,5 +1402,321 @@ vue-router 的官方文档地址：https://router.vuejs.org/zh/
 
 ### vue-router的常见用法
 
-- day7
-- [黑马程序员Vue全套视频教程，从vue2.0到vue3.0一套全覆盖，前端必会的框架教程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1zq4y1p7ga?p=181&vd_source=be746efb77e979ca275e4f65f2d8cda3)
+#### 路由重定向
+
+- 路由重定向指的是：用户在访问地址 A 的时候，强制用户跳转到地址 C ，从而展示特定的组件页面。
+
+- 通过路由规则的 `redirect`属性，指定一个新的路由地址，可以很方便地设置路由的重定向：  
+
+  ```js
+  const router = new VueRouter({
+      routes: [
+          {path: '/', redirect: '/home'},
+          {path: '/home', component: Home},
+          {path: '/movie', component: Movie},
+          {path: '/about', component: About},
+      ]
+  })
+  ```
+
+  
+
+#### 嵌套路由
+
+通过路由实现`组件的嵌套展示`，叫做嵌套路由。
+
+
+
+例如：
+
+1. 点击父级路由链接，切换模板内容：
+
+   ![image-20220628153213658](Vue%E7%BB%84%E4%BB%B6.assets/image-20220628153213658.png)
+
+2. 在模板内容中，又存在子级路由链接：
+
+   ![image-20220628153306873](Vue%E7%BB%84%E4%BB%B6.assets/image-20220628153306873.png)
+
+
+
+实现方式：
+
+1. About.vue
+
+   ```vue
+   <template>
+     <div class="about-container">
+       <h3>About 组件</h3>
+   
+       <router-link to="/about/tab1">tab1</router-link>
+       <router-link to="/about/tab2">tab2</router-link>
+       <hr>
+   
+       <router-view></router-view>
+     </div>
+   </template>
+   
+   <script>
+   export default {
+     name: 'About'
+   }
+   </script>
+   
+   <style lang="less" scoped>
+   .about-container {
+     min-height: 200px;
+     background-color: skyblue;
+     padding: 15px;
+     > a {
+       margin-right: 10px;
+     }
+   }
+   </style>
+   ```
+
+2. index.js：配置`children`属性：
+
+   ```sql
+   const router = new VueRouter({
+       routes: [
+           {path: '/', redirect: '/home'},
+           {path: '/home', component: Home},
+           {path: '/movie', component: Movie},
+           {
+               path: '/about',
+               component: About,
+               children: [
+                   {path: 'tab1', component: Tab1},
+                   {path: 'tab2', component: Tab2}
+               ]
+           },
+       ]
+   })
+   ```
+
+   > 子路由的path属性，不要以 / 开头
+
+
+
+默认子路由：
+
+- redirect方式：
+
+  ```js
+  const router = new VueRouter({
+      routes: [
+          {path: '/', redirect: '/home'},
+          {path: '/home', component: Home},
+          {path: '/movie', component: Movie},
+          {
+              path: '/about',
+  			redirect: '/about/tab1',
+              component: About,
+              children: [
+                  {path: 'tab1', component: Tab1},
+                  {path: 'tab2', component: Tab2}
+              ]
+          },
+      ]
+  })
+  ```
+
+- 配置默认子路由：（children中path值为空字符串）：
+
+  ```js
+  const router = new VueRouter({
+      routes: [
+          {path: '/', redirect: '/home'},
+          {path: '/home', component: Home},
+          {path: '/movie', component: Movie},
+          {
+              path: '/about',
+              component: About,
+              children: [
+                  {path: '', component: Tab1},	// 默认子路由
+                  {path: 'tab1', component: Tab1},
+                  {path: 'tab2', component: Tab2}
+              ]
+          },
+      ]
+  })
+  ```
+
+  
+
+#### 动态路由匹配
+
+案例：
+
+多个电影链接，都使用的Movice组件：
+
+```vue
+<router-link to="/movie/1">电影1</router-link>
+<router-link to="/movie/2">电影1</router-link>
+<router-link to="/movie/3">电影1</router-link>
+...
+```
+
+```js
+{path: '/movie/1',component: Movie},
+{path: '/movie/2',component: Movie},
+{path: '/movie/3',component: Movie},
+...
+```
+
+
+
+使用步骤：
+
+1. 定义动态路由规则：
+
+   使用英文的冒号（:）来定义路由的参数项
+
+   ```js
+   {path: '/movie/:m_id', component: Movie},
+   ```
+
+2. 在动态路由对应的组件中，获取参数项：
+
+   - 使用`this.$route.params  `对象：
+
+     ```vue
+     <template>
+       <div class="movie-container">
+         <h3>Movie 组件</h3>
+     
+         <p>获取到的route动态参数：{{this.$route.params}}</p>
+       </div>
+     </template>
+     ```
+
+   - 使用props:
+
+     1. 开启props传参：
+
+        ```js
+        {path: '/movie/:m_id', component: Movie, props: true},
+        ```
+
+     2. 使用props：
+
+        ```vue
+        <template>
+          <div class="movie-container">
+            <h3>Movie 组件</h3>
+        
+            <p>获取到的route动态参数：{{ m_id }}</p>
+          </div>
+        </template>
+        
+        <script>
+        export default {
+          name: 'Movie',
+          props: ['m_id']
+        }
+        </script>
+        ```
+
+
+
+# 导航
+
+- 声明式导航：在浏览器中，点击链接实现**导航（页面跳转）**的方式
+
+  如点击普通网页的`<a>`链接，Vue项目中点击`<router-link>`
+
+- 编程式导航：在浏览器中，`调用API方式`实现导航的方式
+
+  例如，普通页面调用`location.href`
+
+
+
+## vue-router提供的编程式导航API
+
+常用的导航API如下：
+
+- `this.$router.push('hash地址')`：
+
+  跳转到指定的hash地址，并增加一条历史记录
+
+- `this.$router.replace('hash地址')`
+
+  跳转到指定的hash地址，并替换当前的历史记录
+
+- `this.$router.go(数值n)`
+
+  控制导航历史的前进、后退
+
+  >在实际开发中，一般只会前进和后退一层页面。因此 vue-router 提供了如下两个便捷方法：
+  >
+  >- `this.$router.back()`：后退一个页面
+  >- `this.$router.forward()`：前进一个页面
+
+  
+
+## 导航守卫
+
+导航守卫可以**控制路由的`访问权限`**。
+
+
+
+示意图如下：
+
+![image-20220628162532365](Vue%E7%BB%84%E4%BB%B6.assets/image-20220628162532365.png)
+
+
+
+### 全局前置守卫
+
+- *每次发生路由的导航跳转时，都会触发全局前置守卫*。
+- 因此，在全局前置守卫中，程序员可以对每个路由进行访问权限的控制
+
+
+
+```js
+const router = new VueRouter({...})
+
+// 调用路由示例对象的beforeEach方法，即可声明“全局前置守卫”
+// 每次发生路由导航跳转时，都会触发回调函数fn
+router.beforeEach(fn)
+```
+
+
+
+### 守卫方法
+
+全局前置守卫的回调函数中接收 3 个形参，格式为：  
+
+```js
+router.beforeEach((to, from, next) => {
+    // to：将访问的路由的信息对象
+    // from：将离开的路由的信息对象
+    // next：一个函数，调用next()表示放行，允许此次路由导航
+})
+```
+
+
+
+例如：
+
+```js
+router.beforeEach((to, from, next) => {
+    if (to.path === '/main') {
+        const token = localStorage.getItem('token')
+        if (token) {
+            if (token === 'ok') {
+                next()
+            } else {
+                next(false)     // 无权限，禁止访问
+            }
+        } else {
+            next('/login')      // 无token，强制跳转至登录页
+        }  
+    } else {
+        next()
+    }
+})
+```
+
+
+
