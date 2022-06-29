@@ -1,0 +1,1 @@
+[【尚硅谷】RocketMQ教程丨深度掌握MQ消息中间件_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1cf4y157sz?p=40&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)
