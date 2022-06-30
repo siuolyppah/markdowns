@@ -789,9 +789,655 @@ public class A04Application {
 
   
 
-
-
 # 常见BeanFactory后处理器详解
 
 [黑马程序员Spring视频教程，全面深度讲解spring5底层原理_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1P44y1N7QG?p=20&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)
 
+## ConfigurationClassPostProcessor
+
+该BeanFactory后处理器，可以解析：
+
+- `@ComponentScan`
+- `@Bean`
+- `@Import`
+- `@ImportResource`
+
+
+
+案例：
+
+- 启动类：
+
+  ```java
+  public class A05Application {
+  
+      private static final Logger log = LoggerFactory.getLogger(A05Application.class);
+  
+      public static void main(String[] args) {
+          GenericApplicationContext context = new GenericApplicationContext();
+          context.registerBean("config", Config.class);
+  
+          // @Component, @Bean, @Import @ImportResource
+          context.registerBean(ConfigurationClassPostProcessor.class);
+  
+          context.refresh();
+  
+          Arrays.stream(context.getBeanDefinitionNames()).forEach(System.out::println);
+  
+          context.close();
+      }
+  }
+  ```
+
+- Config.java：
+
+  ```java
+  @Configuration
+  @ComponentScan("com.example.show.lecture5.component")
+  public class Config {
+  
+      @Bean
+      public Bean1 bean1() {
+          return new Bean1();
+      }
+  
+      @Bean(initMethod = "init")
+      public DruidDataSource dataSource() {
+          DruidDataSource dataSource = new DruidDataSource();
+          dataSource.setUrl("jdbc:mysql://localhost:3306/test");
+          dataSource.setUsername("root");
+          dataSource.setPassword("gg12138.");
+          return dataSource;
+      }
+  
+      @Bean
+      public SqlSessionFactoryBean sqlSessionFactoryBean(DataSource dataSource){
+          SqlSessionFactoryBean sqlSessionFactoryBean = new SqlSessionFactoryBean();
+          sqlSessionFactoryBean.setDataSource(dataSource);
+          return sqlSessionFactoryBean;
+      }
+  }
+  ```
+
+- Bean1.java：
+
+  ```java
+  @Component
+  public class Bean1 {
+      private static final Logger log = LoggerFactory.getLogger(Bean1.class);
+  
+  
+      public Bean1() {
+          log.debug(this + "被Spring管理");
+      }
+  }
+  ```
+
+- Bean2.java：
+
+  ```java
+  package com.example.show.lecture5.component;
+  
+  @Component
+  public class Bean2 {
+  
+      private static final Logger log = LoggerFactory.getLogger(Bean2.class);
+  
+      public Bean2() {
+          log.debug(this + "被Spring管理");
+      }
+  }
+  ```
+
+
+
+### 模拟@ComponentScan解析流程
+
+```java
+public class ComponentScanTest {
+
+    public static void main(String[] args) throws IOException {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("config", Config.class);
+
+        ComponentScan componentScan = AnnotationUtils.findAnnotation(Config.class, ComponentScan.class);
+        if (componentScan != null) {
+            for (String basePackage : componentScan.basePackages()) {
+                // com.example.show.lecture5.component -> classpath*:com/example/show/lecture5/component/**/*.class
+                String locationPattern = "classpath*:" + basePackage.replace(".", "/") + "/**/*.class";
+                Resource[] resources = context.getResources(locationPattern);
+
+                CachingMetadataReaderFactory factory = new CachingMetadataReaderFactory();
+                BeanNameGenerator generator = new AnnotationBeanNameGenerator();
+
+                for (Resource resource : resources) {
+                    MetadataReader reader = factory.getMetadataReader(resource);
+
+                    AnnotationMetadata annotationMetadata = reader.getAnnotationMetadata();
+                    if (annotationMetadata.hasAnnotation(Component.class.getName())
+                            || annotationMetadata.hasMetaAnnotation(Component.class.getName())) {    // 是否注有派生注解
+
+                        AbstractBeanDefinition beanDefinition = BeanDefinitionBuilder
+                                .genericBeanDefinition(reader.getClassMetadata().getClassName())
+                                .getBeanDefinition();
+
+                        DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
+                        String beanName = generator.generateBeanName(beanDefinition, beanFactory);
+
+                        beanFactory.registerBeanDefinition(beanName, beanDefinition);
+                    }
+                }
+            }
+        }
+
+        Arrays.stream(context.getBeanDefinitionNames()).forEach(System.out::println);
+    }
+}
+```
+
+
+
+### 模拟@Bean解析流程
+
+```java
+public class BeanTest {
+
+    public static void main(String[] args) throws IOException {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("config", Config.class);
+
+        CachingMetadataReaderFactory factory = new CachingMetadataReaderFactory();
+        MetadataReader reader = factory.getMetadataReader(new ClassPathResource("com/example/show/lecture5/Config.class"));
+
+        AnnotationMetadata annotationMetadata = reader.getAnnotationMetadata();
+        Set<MethodMetadata> methods = annotationMetadata.getAnnotatedMethods(Bean.class.getName());
+
+        methods.forEach(methodMetadata -> {
+            Map<String, Object> attributes = methodMetadata.getAnnotationAttributes(Bean.class.getName());
+            Object initMethod = attributes.get("initMethod");
+
+            BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition();
+            builder.setFactoryMethodOnBean(methodMetadata.getMethodName(), "config");   // 指定充当factory的Bean的name
+            builder.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_CONSTRUCTOR);       // 工厂方法和构造方法，使用该模式
+            if (initMethod != null) {
+                builder.setInitMethodName(initMethod.toString());
+            }
+            AbstractBeanDefinition beanDefinition = builder.getBeanDefinition();
+
+            context.registerBeanDefinition(methodMetadata.getMethodName(), beanDefinition);
+        });
+
+        context.refresh();
+        Arrays.stream(context.getBeanDefinitionNames()).forEach(System.out::println);
+    }
+}
+```
+
+
+
+## MapperScannerConfigurer(Mybatis)
+
+扫描Mybatis的`@Mapper`
+
+
+
+案例：
+
+- 启动类：
+
+  ```java
+  public class A05Application {
+  
+      private static final Logger log = LoggerFactory.getLogger(A05Application.class);
+  
+      public static void main(String[] args) {
+          GenericApplicationContext context = new GenericApplicationContext();
+          context.registerBean("config", Config.class);
+  
+          // @Component, @Bean, @Import @ImportResource
+          context.registerBean(ConfigurationClassPostProcessor.class);
+  
+          // 扫描Mybatis的@Mapper
+          context.registerBean(MapperScannerConfigurer.class, bd -> {
+              bd.getPropertyValues().add("basePackage", "com.example.show.lecture5.mapper");
+          });
+  
+  
+          context.refresh();
+  
+          Arrays.stream(context.getBeanDefinitionNames()).forEach(System.out::println);
+          
+          context.close();
+      }
+  }
+  ```
+
+- mapper：
+
+  ```java
+  package com.example.show.lecture5.mapper;
+  
+  @Mapper
+  public interface Mapper1 {
+  }
+  ```
+
+  
+
+### 模拟@Mapper解析流程
+
+```java
+public class MapperTest {
+
+    public static void main(String[] args) throws IOException {
+        PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+        Resource[] resources = resolver.getResources("classpath*:com/example/show/lecture5/mapper/**/*.class");
+
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("config", Config.class);
+        context.registerBean(ConfigurationClassPostProcessor.class);
+
+        CachingMetadataReaderFactory factory = new CachingMetadataReaderFactory();
+        AnnotationBeanNameGenerator generator = new AnnotationBeanNameGenerator();
+        for (Resource resource : resources) {
+            MetadataReader reader = factory.getMetadataReader(resource);
+            ClassMetadata classMetadata = reader.getClassMetadata();
+
+            if (classMetadata.isInterface()) {
+                AbstractBeanDefinition beanDefinitionOfMapperFactoryBean = BeanDefinitionBuilder
+                        .genericBeanDefinition(MapperFactoryBean.class)
+                        .addConstructorArgValue(classMetadata.getClassName())
+                        .setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE)
+                        .getBeanDefinition();
+
+                AbstractBeanDefinition beanDefinitionOfMapperInterface = BeanDefinitionBuilder
+                        .genericBeanDefinition(classMetadata.getClassName())
+                        .getBeanDefinition();
+
+                String beanName = generator.generateBeanName(beanDefinitionOfMapperInterface, context);
+                context.registerBeanDefinition(beanName,beanDefinitionOfMapperFactoryBean);
+            }
+        }
+
+        context.refresh();
+        Arrays.stream(context.getBeanDefinitionNames()).forEach(System.out::println);
+    }
+}
+```
+
+
+
+# Aware接口
+
+## Aware、InitializingBean接口的作用
+
+- Aware 接口提供了一种【内置】 的注入手段，例如：
+
+  * BeanNameAware 注入 bean 的名字
+  * BeanFactoryAware 注入 BeanFactory 容器
+  * ApplicationContextAware 注入 ApplicationContext 容器
+  * EmbeddedValueResolverAware 注入 ${} 解析器
+
+  > 实现同样的功能：
+  >
+  > - Bean实现Aware接口
+  > - 容器添加后处理器，例如@Autowired
+
+- InitializingBean 接口提供了一种【内置】的初始化手段：
+
+  > 实现同样的功能：
+  >
+  > - Bean实现InitializingBean接口
+  > - 容器添加后处理器，例如@PostConstruct
+
+
+
+> 需要注意的是：
+>
+> - 令Bena实现接口的方式，是Spring内置提供的，不需要后处理器支持
+
+
+
+- MyBean.class：
+
+  ```java
+  public class MyBean implements BeanNameAware, ApplicationContextAware, InitializingBean {
+  
+      private static final Logger logger = LoggerFactory.getLogger(MyBean.class);
+  
+      // 此方法，将在初始化方法之前被回调
+      @Override
+      public void setBeanName(String name) {
+          logger.debug("{}的name为：{}", this, name);
+      }
+  
+      @Override
+      public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+          logger.debug("容器为:{}", applicationContext);
+      }
+  
+  
+      @Override
+      public void afterPropertiesSet() throws Exception {
+          logger.debug("{}执行初始化操作", this);
+      }
+  }
+  ```
+
+- 测试类：
+
+  ```java
+  public class A06Application {
+  
+      private static final Logger log = LoggerFactory.getLogger(A06Application.class);
+  
+      public static void main(String[] args) {
+          GenericApplicationContext context = new GenericApplicationContext();
+          context.registerBean("myBean", MyBean.class);
+  
+          context.refresh();
+  
+          context.close();
+      }
+  }
+  ```
+
+  
+
+## @Autowired失效的情况
+
+### 问题Demo
+
+- MyConfig1.java：
+
+  ```java
+  @Configuration
+  public class MyConfig1 {
+  
+      private static final Logger log = LoggerFactory.getLogger(MyConfig1.class);
+  
+      @Autowired		// 失效
+      public void setApplicationContext(ApplicationContext context) {
+          log.debug("注入：{}", context);
+      }
+  
+      @PostConstruct	// 失效
+      public void init() {
+          log.debug("初始化");
+      }
+  
+  
+      // 当添加此Bean时，拓展功能都将失效
+      @Bean
+      public BeanFactoryPostProcessor processor1() {
+          return beanFactory -> {
+              log.debug("执行processor1");
+          };
+      }
+  }
+  ```
+
+- 测试类：
+
+  ```java
+  public class A06Application {
+  
+      private static final Logger log = LoggerFactory.getLogger(A06Application.class);
+  
+      public static void main(String[] args) {
+          GenericApplicationContext context = new GenericApplicationContext();
+          context.registerBean("myConfig1", MyConfig1.class);
+  
+          context.registerBean(AutowiredAnnotationBeanPostProcessor.class);
+          context.registerBean(CommonAnnotationBeanPostProcessor.class);
+          context.registerBean(ConfigurationClassPostProcessor.class);
+  
+          context.refresh();
+          /*
+           * refresh()流程如下：
+           * 1. 找到容器中的所有BeanFactoryProcessor，并执行
+           * 2. 添加Bean后处理器
+           * 3. 初始化单例
+           * */
+  
+          context.close();
+      }
+  }
+  
+  ```
+
+
+
+### 问题分析
+
+- Java 配置类不包含 BeanFactoryPostProcessor 的情况
+
+  ```mermaid
+  sequenceDiagram 
+  participant ac as ApplicationContext
+  participant bfpp as BeanFactoryPostProcessor
+  participant bpp as BeanPostProcessor
+  participant config as Java配置类
+  ac ->> bfpp : 1. 执行 BeanFactoryPostProcessor
+  ac ->> bpp : 2. 注册 BeanPostProcessor
+  ac ->> +config : 3. 创建和初始化
+  bpp ->> config : 3.1 依赖注入扩展(如 @Value 和 @Autowired)
+  bpp ->> config : 3.2 初始化扩展(如 @PostConstruct)
+  ac ->> config : 3.3 执行 Aware 及 InitializingBean
+  config -->> -ac : 3.4 创建成功
+  ```
+
+
+- Java 配置类包含 BeanFactoryPostProcessor 的情况，因此要创建其中的 BeanFactoryPostProcessor 必须提前创建 Java 配置类，而此时的 BeanPostProcessor 还未准备好，导致 @Autowired 等注解失效
+
+  ```mermaid
+  sequenceDiagram 
+  participant ac as ApplicationContext
+  participant bfpp as BeanFactoryPostProcessor
+  participant bpp as BeanPostProcessor
+  participant config as Java配置类
+  ac ->> +config : 3. 创建和初始化
+  ac ->> config : 3.1 执行 Aware 及 InitializingBean
+  config -->> -ac : 3.2 创建成功
+  
+  ac ->> bfpp : 1. 执行 BeanFactoryPostProcessor
+  ac ->> bpp : 2. 注册 BeanPostProcessor
+  ```
+
+  
+
+### 解决方案
+
+```java
+@Configuration
+public class MyConfig2 implements InitializingBean, ApplicationContextAware {
+
+    private static final Logger log = LoggerFactory.getLogger(MyConfig2.class);
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        log.debug("初始化");
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        log.debug("注入 ApplicationContext");
+    }
+
+    @Bean
+    public BeanFactoryPostProcessor processor2() {
+        return beanFactory -> {
+            log.debug("执行 processor2");
+        };
+    }
+}
+```
+
+
+
+# 初始化和销毁手段
+
+Spring提供的初始化手段：
+
+1. @PostConstruct 标注的初始化方法
+2. InitializingBean 接口的初始化方法
+3. @Bean(initMethod) 指定的初始化方法
+
+> 如果同一个Bean声明了上述全部方法，则执行流程同上
+
+
+
+Spring 也提供了多种销毁手段，执行顺序为
+
+1. @PreDestroy 标注的销毁方法
+2. DisposableBean 接口的销毁方法
+3. @Bean(destroyMethod) 指定的销毁方法
+
+
+
+# Scope
+
+在当前版本的 Spring 和 Spring Boot 程序中，支持五种 Scope：
+
+* singleton，容器启动时创建（未设置延迟），容器关闭时销毁
+* prototype，每次使用时创建，不会自动销毁，需要调用 DefaultListableBeanFactory.destroyBean(bean) 销毁
+* request，每次请求用到此 bean 时创建，请求结束时销毁
+* session，每个会话用到此 bean 时创建，会话结束时销毁
+* application，web 容器用到此 bean 时创建，容器停止时销毁
+
+
+
+## 案例
+
+- BeanForRequest：
+
+  ```java
+  @Scope("request")
+  @Component
+  public class BeanForRequest {
+  
+      private static final Logger log = LoggerFactory.getLogger(BeanForRequest.class);
+  
+      @PreDestroy
+      public void destroy() {
+          log.debug("destroy");
+      }
+  }
+  ```
+
+- BeanForSession：
+
+  ```java
+  @Scope("session")
+  @Component
+  public class BeanForSession {
+  
+      private static final Logger log = LoggerFactory.getLogger(BeanForSession.class);
+  
+      @PreDestroy
+      public void destroy() {
+          log.debug("destroy");
+      }
+  }
+  ```
+
+- BeanForApplication：
+
+  ```java
+  @Scope("application")
+  @Component
+  public class BeanForApplication {
+  
+      private static final Logger log = LoggerFactory.getLogger(BeanForApplication.class);
+  
+      @PreDestroy
+      public void destroy() {
+          log.debug("destroy");
+      }
+  }
+  ```
+
+- 启动类：
+
+  ```java
+  @SpringBootApplication
+  public class A08Application {
+      public static void main(String[] args) {
+          SpringApplication.run(A08Application.class, args);
+      }
+  }
+  ```
+
+- Controller:
+
+  ```JAVA
+  @RestController
+  public class MyController {
+  
+      @Lazy
+      @Autowired
+      private BeanForRequest beanForRequest;
+  
+      @Lazy
+      @Autowired
+      private BeanForSession beanForSession;
+  
+      @Lazy
+      @Autowired
+      private BeanForApplication beanForApplication;
+  
+      @GetMapping("/test")
+      public String test() {
+          return "<ul>" +
+                  "<li>" + "request scope:" + beanForRequest + "</li>" +
+                  "<li>" + "session scope:" + beanForSession + "</li>" +
+                  "<li>" + "application scope:" + beanForApplication + "</li>" +
+                  "</ul>";
+      }
+  }
+  ```
+
+  
+
+## Scope失效的情况
+
+**Singleton的Bean对象，在注入其他Scope的对象时，将出现问题**（即变成Singleton）。
+
+
+
+对于单例对象来讲，依赖注入仅发生了一次，后续再没有用到多例的 F，因此 E 用的始终是第一次依赖注入的 F：
+
+```mermaid
+graph LR
+
+e1(e 创建)
+e2(e set 注入 f)
+
+f1(f 创建)
+
+e1-->f1-->e2
+```
+
+
+
+解决方案：
+
+- 使用 `@Lazy` 生成代理：
+
+  代理对象虽然还是只有一个不会变化，但每次调用代理对象的任意方法时，都会由代理对象创建新的f对象
+
+- `@Scope(value = "prototype", proxyMode = ScopedProxyMode.TARGET_CLASS)`
+
+  动态代理
+
+- 依赖`ObjectFactory<>`对象
+
+- 依赖`ApplicationContext`
+
+
+
+# 总结
+
+### Spring Bean的生命周期流程
+
+- [参考教程](http://c.biancheng.net/spring/life-cycle.html#:~:text=%E5%85%B6%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E3%80%82-,Spring%20%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E6%B5%81%E7%A8%8B,-Spring%20Bean%20%E7%9A%84)
