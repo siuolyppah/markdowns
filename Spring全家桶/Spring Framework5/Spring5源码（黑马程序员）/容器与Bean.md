@@ -1438,6 +1438,18 @@ e1-->f1-->e2
 
 # 总结
 
-### Spring Bean的生命周期流程
+## Spring Bean的生命周期流程
 
 - [参考教程](http://c.biancheng.net/spring/life-cycle.html#:~:text=%E5%85%B6%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E3%80%82-,Spring%20%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E6%B5%81%E7%A8%8B,-Spring%20Bean%20%E7%9A%84)
+
+
+
+## 一些工具类
+
+- 创建Bean Definition：
+
+  `BeanDefinitionBuilder`
+
+- ` CachingMetadataReaderFactory factory`
+
+- `BeanNameGenerator`
