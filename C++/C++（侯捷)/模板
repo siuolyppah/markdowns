@@ -1,0 +1,115 @@
+# 类模板
+
+![image-20220707174714156](%E6%A8%A1%E6%9D%BF.assets/image-20220707174714156.png)
+
+> **类模板，必须指明参数**。
+
+
+
+# 函数模板
+
+![image-20220707174721639](%E6%A8%A1%E6%9D%BF.assets/image-20220707174721639.png)
+
+> 函数模板，可以不必指明
+
+
+
+# 成员模板
+
+![image-20220707174746916](%E6%A8%A1%E6%9D%BF.assets/image-20220707174746916.png)
+
+![image-20220707174802038](%E6%A8%A1%E6%9D%BF.assets/image-20220707174802038.png)
+
+> 注意，只要变量p能够满足拷贝构造函数的初始化列表即可。
+>
+> 即：向上转型
+
+
+
+![image-20220707174807453](%E6%A8%A1%E6%9D%BF.assets/image-20220707174807453.png)
+
+
+
+# 模板特化specialization
+
+![image-20220707185958815](%E6%A8%A1%E6%9D%BF.assets/image-20220707185958815.png)
+
+
+
+## 模板偏特化
+
+- **个数**上的偏：
+
+  ![image-20220707194101519](%E6%A8%A1%E6%9D%BF.assets/image-20220707194101519.png)
+
+- **范围**上的偏：
+
+  ![image-20220707194710775](%E6%A8%A1%E6%9D%BF.assets/image-20220707194710775.png)
+
+
+
+# 模板模板参数
+
+```C++
+template<typename T, template<typename U> typename Container>
+class XCls
+{
+    private:
+        Container<T> c;
+};
+```
+
+模板的第一个参数是`T`类型，第二个参数是一个`Container<U>`类型。
+
+> 即Container是必须带有泛型的。
+
+
+
+```C++
+template<typename T,
+        template<typename U> class Container>
+class XCLS {
+private:
+    Container<T> c;
+};
+
+template<typename T>
+class cls_one_template {};
+
+template<typename T, typename R>
+class cls_two_template {};
+
+template<typename T>
+using Two = cls_two_template<T,T>;
+
+int main() {
+    XCLS<complex, cls_one_template> xcls1;  // ok
+    XCLS<complex, Two> xcls2;               // ok
+
+    XCLS<complex, cls_two_template> xcls3;               // error!!!
+    XCLS<complex, cls_two_template<int>> xcls3;          // error!!!
+
+    return 0;
+}
+```
+
+> Template argument for template template parameter must be a class template or type alias template
+
+
+
+对比：
+
+![image-20220707205927213](%E6%A8%A1%E6%9D%BF.assets/image-20220707205927213.png)
+
+```C++
+#include "stack"
+#include "deque"
+
+int main() {
+    std::stack<int> st1;
+    std::stack<int, std::deque<int>> st2;
+
+    return 0;
+}
+```
+
