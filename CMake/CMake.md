@@ -17,7 +17,7 @@
 1. 编写一个HelloWorld
 
    ```cpp
-   #main.cpp
+   // main.cpp
    #include <iostream>
    int main(){
        std::cout << "hello word" << std::endl;
