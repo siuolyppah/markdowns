@@ -1,0 +1,143 @@
+# 动机
+
+- 在软件构建过程中，我们需要为某些对象建立一种“通知依赖关系” ：
+
+  一个对象（目标对象）的状态发生改变，**所有的依赖对象**（观察者对象）都将得到通知。
+
+  > 如果这样的依赖关系过于紧密，将使软件不能很好地抵御变化  
+
+- 使用面向对象技术，可以将这种依赖关系弱化，并形成一种稳定的依赖关系。从而实现软件体系结构的松耦合。
+
+
+
+
+
+# 模式定义
+
+定义对象间的一种，一对多的依赖关系（变化），以便于当一个对象（Subject）的状态发送改变时，所有依赖于它的对象都能够得到通知并自动更新。
+
+
+
+# 结构
+
+![image-20220713134909055](Observer%20%20Event.assets/image-20220713134909055.png)
+
+
+
+# 要点总结
+
+- 使用面向对象的抽象，Observer模式使我们可以独立地改变目标与观察者，从而使得二者之间的依赖关系达致松耦合。
+- 目标发送通知时，无需指定观察者，通知（可携带通知信息作为参数）会自动传播。
+- 观察者自己决定，是否需要订阅通知，目标对象对此一无所知。
+- Observer模式，是基于事件的UI框架中非常常用的设计模式，也是MVC模式的一个重要组成部分。
+
+
+
+# Demo
+
+[观察者模式 | 菜鸟教程 (runoob.com)](https://www.runoob.com/design-pattern/observer-pattern.html)
+
+
+
+- 改进前：
+
+  ```C++
+  class FileSpliter {
+  private:
+  	string m_filePath;
+  	int m_fileNumber;
+  	ProgressBar* m_progressBar;
+  
+  public:
+  	FileSpliter(const string& filePath, int fileNumber, ProgressBar* progressBar) 
+  		:m_filePath(filePath),m_fileNumber(fileNumber),m_progressBar(progressBar)	
+  	{	}
+  
+  	void split() {
+  		// 1. 读取大文件
+  		// 2. 分批次向小文件写入
+  		for (int i = 0; i < m_fileNumber; i++) {
+  
+  			// 更新进度条
+  			m_progressBar->setValue((i + 1) / m_fileNumber);
+  		}
+  	}
+  };
+  
+  class Form;
+  class MainForm : public Form {
+  private:
+  	TextBox* textFilePath;
+  	TextBox* textFileNumber;
+  	ProgressBar* progressBar;
+  
+  public:
+  	void button_click() {
+  		string filePath = textFilePath->getText();
+  		int number = atoi(textFileNumber->getText().c_str());
+  
+  		FileSpliter splitter(filePath, number,progressBar);
+  		splitter.split();
+  	}
+  };
+  ```
+
+- 改进后：
+
+  ```C++
+  class IProgress {
+  public:
+  	virtual void doProgress(float value) = 0;
+  	
+  	virtual ~IProgress(){}
+  };
+  
+  class FileSpliter {
+  private:
+  	string m_filePath;
+  	int m_fileNumber;
+  	IProgress* m_iprogress;
+  
+  public:
+  	FileSpliter(const string& filePath, int fileNumber, IProgress* iprogress) 
+  		:m_filePath(filePath),m_fileNumber(fileNumber),m_iprogress(iprogress)	
+  	{	}
+  
+  	void split() {
+  		// 1. 读取大文件
+  		// 2. 分批次向小文件写入
+  		for (int i = 0; i < m_fileNumber; i++) {
+  
+  			if (m_iprogress != nullptr) {
+  				// 更新进度条
+  				float progressValue = m_fileNumber;
+  				progressValue = (i + 1) / progressValue;
+  				m_iprogress->doProgress(progressValue);
+  			}
+  		}
+  	}
+  };
+  
+  class Form;
+  class MainForm : public Form,public IProgress {
+  private:
+  	TextBox* textFilePath;
+  	TextBox* textFileNumber;
+  	ProgressBar* progressBar;
+  
+  public:
+  	virtual void doProgress(float value) {
+  		progressBar->setValue(value);
+  	}
+  
+  	void button_click() {
+  		string filePath = textFilePath->getText();
+  		int number = atoi(textFileNumber->getText().c_str());
+  
+  		FileSpliter splitter(filePath, number,this);
+  		splitter.split();
+  	}
+  };
+  ```
+
+  
