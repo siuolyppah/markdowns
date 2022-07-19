@@ -1,0 +1,262 @@
+# 任务和thread
+
+- 任务：那些可以与其他计算，并行执行的计算
+
+  > ## 💡 以函数，或函数对象的形式出现。
+
+- 线程：是任务在程序中的系统级表示
+
+
+
+```C++
+void f();					// 函数
+
+struct F{					// 函数对象
+    void operator(){}		// F嗲用运算符
+}
+
+void user(){
+    thread t1{f};			// f()在单独的线程中进行
+    thread t2{F()};			// F()()在单独的线程中执行
+    
+    t1.join();
+    t2.join();
+}
+```
+
+
+
+# 传递参数
+
+任务通常需要处理数据，可以将数据（或指向数据的指针或引用），作为参数传递给任务。
+
+
+
+例如：
+
+```C++
+void f(vector<double>& v);
+
+struct F {
+	vector<double>& v;
+	F(vector<double>& vv) :v(vv) {}
+	void operator()();
+};
+
+int main() {
+	
+	vector<double> some_vec{ 1,2,3,4,5,6,7,8,9 };
+	vector<double> vec2{ 10,11,12,13,14,15 };
+
+	thread t1{ f,some_vec };
+	thread t2{ F(vec2) };
+
+	t1.join();
+	t2.join();
+}
+```
+
+在这个例子中，`F{vec2}`将指向一个参数(vector)的引用保存在F中。
+
+> 将vec2以传值方法进行传递，可以避免在执行时受到其他任务访问vec2的影响。
+
+
+
+上面的代码`{f,some_vec}`初始化一个线程对象，它**使用thread的可变参数模板构造函数，接收一个任意的参数序列**。编译器检查第一个对象（函数或函数对象），是否能被后续的参数来调用。
+
+
+
+# 返回结果
+
+- 通过参数，可以返回结果。但不太优雅。
+
+
+
+# 共享数据
+
+## mutex与锁
+
+在访问共享数据时，需要进行同步操作，以确保同一时刻至多一个任务访问数据。
+
+
+
+使用“互斥对象”mutex。thread使用`lock()`操作来获取一个互斥对象：
+
+```C++
+mutex m;	// 控制共享数据访问
+int sh;		// 共享的数据
+
+void f() {
+	unique_lock<mutex> lck{ m };	// 获取mutex
+	sh += 7;						// 处理共享数据
+}	// 隐式释放mutex
+```
+
+unique_lock的构造函数，获取了互斥对象（通过调用m.lock()）。
+
+如果另一个线程已经获得了互斥对象，则当前线程会阻塞等待。
+
+一旦线程完成了对共享数据的访问，unique_lock会释放mutex（通过调用m.unlock()）。
+
+
+
+通常将共享数据和mutex对象进行封装：
+
+```C++
+class Record{
+public:
+    mutex m;
+    // ...
+}
+```
+
+
+
+如果需要同时访问多个资源来执行某个操作，可能导致死锁。
+
+如thread1获取了mutex1，试图获取mutex2；
+
+如thread2获取了mutex2，试图获取mutex1.
+
+
+
+标准库提供了一个可以**同时获取多个锁**的操作：
+
+```C++
+void f() {
+	// ...
+
+	// 推迟加锁，此时还未尝试获取mutex
+	unique_lock<mutex> lck1{ m1,defer_lock };	
+	unique_lock<mutex> lck2{ m2,defer_lock };
+	unique_lock<mutex> lck3{ m3,defer_lock };
+
+	lock(lck1, lck2, lck3);	// 获取全部三个锁
+	// 处理共享数据
+}// 隐式释放所有mutex
+```
+
+`lock()`调用，仅会在获取了全部的mutex实参后才会继续执行。
+
+unique_lock的析构函数，保证了当thread离开作用域时，mutex会释放。
+
+
+
+## 条件变量与线程间通信
+
+通过外部事件，实现线程间通信的基本方法是使用condition_variable，它定义在<condition_variable>中。
+
+条件变量，提供了一种机制：允许一个threa等待另外一个thread。特别是，**它允许一个thread等待某个条件（condition，通常称为一个事件，event）发生**，这种条件通常是其他thread完成工作产生的结果。
+
+
+
+```C++
+class Message {		// 通信的对象
+	// ...
+};
+
+queue<Message> mqueue;		// 消息的队列
+condition_variable mcond;	// 通信用的条件变量
+mutex mmutex;				// 锁机制
+
+void consumer() {
+	while (true)
+	{
+		unique_lock<mutex> lck{ mmutex };	// 获取mmutex
+
+		while (mqueue.empty()) {
+			mcond.wait(lck);				//// 释放lck并等待
+		}			
+											// 被唤醒后重新获取lck
+		
+		auto m = mqueue.front();			// 获取消息
+		mqueue.pop();
+		lck.unlock();
+
+		// 处理m
+	}
+}
+```
+
+通过mutex，对queue和condition_variable进行保护。
+
+**当线程在条件变量上等待时，会释放已持有的锁，直至被唤醒后重新获取锁**。
+
+
+
+```C++
+void producer() {
+	while (true)
+	{
+		Message m;
+
+		unique_lock<mutex> lck{ mmutex };	// 保护队列上的操作
+		mqueue.push(m);
+		mcond.notify_one();					// 通知
+	}// 释放锁（在作用域结束时）
+}
+```
+
+
+
+
+
+# 任务通信
+
+标准库提供了一些特性，允许程序员在抽象的任务层（工作并发执行）进行操作，而不是在底层的线程和锁的层次直接进行操作：
+
+- future和promis，用来从一个独立线程上创建出的任务返回结果。
+- packaged_task，是帮助启动任务以及连接返回结果的机制。
+- async()以非常类似函数的方式，启动一个任务。
+
+这些特性都定义在`<future>`中。
+
+
+
+## future和promise
+
+future和promise的关键点，在于它们**允许在两个任务间传输值，而无需显式的使用锁**。
+
+
+
+基本思路很简单：当一个任务，需要向另一个任务传输某个值时，它把放入promise中。
+
+![image-20220719214517839](%E5%B9%B6%E5%8F%91d.assets/image-20220719214517839.png)
+
+
+
+```C++
+void f(promise<int>& px) {	// 一个任务：将结果放入px
+	try {
+		px.set_value(100);
+	}
+	catch (...) {
+        // 将异常传递给future的线程
+		px.set_exception(current_exception());
+	}
+}
+
+
+int main() {
+	promise<int> px;
+	future<int> fx = px.get_future();	
+	
+	try {
+		int x = fx.get();	// 如必要，等待值准备好
+	}
+	catch (...) {			// 错误：x不能正确计算
+		// 处理错误
+	}
+}
+```
+
+对于`future<X>.get()`：
+
+- 如果值还未准备好，则线程将阻塞等待
+- 如果值无法正确地计算出来，则get()会抛出一个异常
+
+
+
+## packaged_task
+
+5.3.5.2
