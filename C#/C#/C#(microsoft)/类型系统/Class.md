@@ -1,0 +1,1 @@
+[类 | Microsoft Docs](https://docs.microsoft.com/zh-cn/dotnet/csharp/fundamentals/types/classes)
