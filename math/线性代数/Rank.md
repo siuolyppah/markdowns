@@ -1,1 +1,0 @@
-[[Linear Algebra 2022\] 线性代数 李宏毅_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV16q4y1e7Cm?p=17&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)
