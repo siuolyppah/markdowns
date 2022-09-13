@@ -2,7 +2,7 @@
 
 
 
-![image-20220718221235921](x86汇编.assets/image-20220718221235921.png)
+![image-20220718221235921](Readme.assets/image-20220718221235921.png)
 
 - 下载资源：[Assembly Language for x86 Processors (asmirvine.com)](http://www.asmirvine.com/)
 
