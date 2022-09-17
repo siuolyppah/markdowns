@@ -57,3 +57,9 @@ socketpair前三个参数的含义与socket系统调用的三个参数完全相�
 
 6.2节
 
+
+
+# sendfile()
+
+>[sendfile:Linux中的"零拷贝" - 摩斯电码 - 博客园 (cnblogs.com)](https://www.cnblogs.com/pengdonglin137/articles/7995528.html)
+
