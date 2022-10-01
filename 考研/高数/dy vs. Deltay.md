@@ -10,7 +10,8 @@
 
 以$y=\sqrt{x}$为例，选取两个点$x_0(4,2)$，$x_1(9,3)$，则：
 $$
-\Delta y =\sqrt9-\sqrt4 \\ \Delta x =9-4 
+\Delta y =\sqrt9-\sqrt4 \\ \Delta x =9-4 
+
 $$
 ![image-20220824180532398](dy%20vs.%20Deltay.assets/image-20220824180532398.png)
 
