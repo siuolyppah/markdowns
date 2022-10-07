@@ -18,12 +18,15 @@
     <ClInclude Include="dsexceptions.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="binary_tree.h">
+    <ClInclude Include="avl_tree.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="AvlTree.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="binary_tree.cpp">
+    <ClCompile Include="avl_tree.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
