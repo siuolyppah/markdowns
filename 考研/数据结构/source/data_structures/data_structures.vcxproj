@@ -127,12 +127,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="AvlTree.h" />
-    <ClInclude Include="avl_tree.h" />
     <ClInclude Include="dsexceptions.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="avl_tree.cpp" />
+    <ClCompile Include="cicle_queue.h" />
+    <ClCompile Include="circle_queue.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

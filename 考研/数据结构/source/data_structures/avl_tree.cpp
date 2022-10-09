@@ -4,12 +4,9 @@
 int main() {
 	avl_tree<int> t;
 
-	t.insert(6);
-	t.insert(4);
-	t.insert(5);
-	t.insert(0);
+	for (int i = 1; i <= 20; ++i) {
+		t.insert(i);
+	}
 
-	t.print();
-
-	t.remove(4);
+	t.sequence_traversal();
 }

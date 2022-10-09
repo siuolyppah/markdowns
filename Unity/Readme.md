@@ -31,5 +31,4 @@
 
 continue:
 
-[【unity2021入门教程】18-官方入门教程系列-03-基本概念-01-Gameobject&Component_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1Mr4y1X76H?p=19&vd_source=be746efb77e979ca275e4f65f2d8cda3)
-
+[【unity2021入门教程】43-官方入门教程系列-05-CreatorKitBeginnerCode-10-通过arpg例子复习知识点_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1Mr4y1X76H/?p=44&spm_id_from=pageDriver&vd_source=be746efb77e979ca275e4f65f2d8cda3)

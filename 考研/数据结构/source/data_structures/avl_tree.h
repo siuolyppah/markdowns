@@ -2,6 +2,7 @@
 #define MY_AVL_TREE
 
 #include<algorithm>
+#include<queue>
 #include "dsexceptions.h"
 
 template <typename T>
@@ -57,6 +58,10 @@ public:
 		return t->data;
 	}
 
+	void sequence_traversal() {
+		sequence_traversal(root);
+	}
+
 private:
 	void make_empty(node_ptr&);
 
@@ -100,6 +105,8 @@ private:
 
 		return find_min(t->left);
 	}
+
+	void sequence_traversal(node_ptr t) const;
 };
 
 
@@ -157,7 +164,7 @@ inline void avl_tree<T>::balance(node_ptr& t)
 
 	}
 	else if (height(t->right) - height(t->left) > ALLOWED_IMBALANCE) {
-		if (height(t->right->right) >= height(t->left->left)) {
+		if (height(t->right->right) >= height(t->right->left)) {
 			// RR
 			rotate_rr(t); prompt("RR");
 		}
@@ -227,6 +234,30 @@ inline void avl_tree<T>::remove(node_ptr& t, T data)
 	}
 
 	balance(t);
+}
+
+template<typename T>
+inline void avl_tree<T>::sequence_traversal(node_ptr t) const
+{
+	std::queue<node_ptr> q;
+
+	if (t != nullptr) {
+		q.push(t);
+	}
+	while (!q.empty()) {
+		node_ptr ptr = q.front();
+		q.pop();
+
+		std::cout << ptr->data << std::endl;
+
+		if (ptr->left) {
+			q.push(ptr->left);
+		}
+		if (ptr->right) {
+			q.push(ptr->right);
+		}
+	}
+
 }
 
 

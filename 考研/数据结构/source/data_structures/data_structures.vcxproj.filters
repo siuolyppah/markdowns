@@ -18,15 +18,12 @@
     <ClInclude Include="dsexceptions.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="avl_tree.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="AvlTree.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="avl_tree.cpp">
+    <ClCompile Include="cicle_queue.h">
+      <Filter>头文件</Filter>
+    </ClCompile>
+    <ClCompile Include="circle_queue.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

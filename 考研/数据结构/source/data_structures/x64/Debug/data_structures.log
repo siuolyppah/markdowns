@@ -1,2 +1,13 @@
-﻿  avl_tree.cpp
+﻿  circle_queue.cpp
+E:\markdowns\考研\数据结构\source\data_structures\circle_queue.cpp(9,12): warning C4267: “参数”: 从“size_t”转换到“T”，可能丢失数据
+          with
+          [
+              T=int
+          ]
+E:\markdowns\考研\数据结构\source\data_structures\circle_queue.cpp(19,12): warning C4267: “参数”: 从“size_t”转换到“T”，可能丢失数据
+          with
+          [
+              T=int
+          ]
+E:\markdowns\考研\数据结构\source\data_structures\cicle_queue.h(68): warning C4715: “circle_queue<int>::begin”: 不是所有的控件路径都返回值
   data_structures.vcxproj -> E:\markdowns\考研\数据结构\source\data_structures\x64\Debug\data_structures.exe
