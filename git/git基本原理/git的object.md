@@ -79,9 +79,44 @@ committer gxy <2793392818@qq.com> 1666186343 +0800
 
 
 
+# tag object
+
+通过`tag -a -m`创建
+
+
+
 # parent object
 
 指向上一次的commit对象。
 
 > 本身并不存在，只是记录该commit的parent是谁。
 
+
+
+
+
+# git gc
+
+- 文件的每次add，都会生成一个blob对象，即便它们对应的原文件差异很小。
+- 使用`git gc`可以进行压缩，objects对象将被压缩至`.git/objects/pack`文件夹。
+
+
+
+> `git verify-pack -v xxx.idx`可以查看详细的压缩信息。
+
+> 解压缩pack文件：
+> `git unpack-objects < xxx.pack` 
+
+
+
+# 垃圾对象
+
+- 垃圾对象的产生：
+
+  - 在一次commit前，对同一文件的多次add。会导致有的blob对象，并没有被commit对象引用。	
+
+- `git prune`命令，用于将无用的对象修剪掉。
+
+  > `git gc`只会压缩有用对象，垃圾对象将遗留未压缩。
+
+![image-20221020114000572](git%E7%9A%84object.assets/image-20221020114000572.png)
