@@ -1,0 +1,2 @@
+- [运行 CMake · Modern CMake (modern-cmake-cn.github.io)](https://modern-cmake-cn.github.io/Modern-CMake-zh_CN/chapters/intro/running.html)
+- [Modern CMake (cliutils.gitlab.io)](https://cliutils.gitlab.io/modern-cmake/modern-cmake.pdf)
