@@ -1,0 +1,14 @@
+- the mov instruction is the only instruction that supports 64-bit immediate operands.
+- 在默认情况下，立即数被编码为32位。
+
+![image-20221101232616385](Difference%20Between%20x86-64%20&%20x86-32.assets/image-20221101232616385.png)
+
+
+
+- 当使用操作32位寄存器或操作数时的指令时，高32位将==被清零==。
+
+  For example, assume that register RAX contains the value 0x8000000000000000. Execution of the instruction add eax,10 generates a result of 0x000000000000000A in RAX.
+
+- 但使用8位或16的寄存器或操作数时，高位==将保留==。
+
+  Assuming again that if RAX contains 0x8000000000000000, execution of the instructions add al,20 or add ax,40 would yield RAX values of 0x8000000000000014 or 0x8000000000000028, respectively.
