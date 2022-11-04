@@ -1,0 +1,1 @@
+![image-20221104124819521](Boolean%20Logical.assets/image-20221104124819521.png)

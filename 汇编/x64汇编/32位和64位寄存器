@@ -1,0 +1,23 @@
+[(149) Modern x64 Assembly 3: 32 and 64 bit Registers - YouTube](https://www.youtube.com/watch?v=Dh7GQ_joeE4&list=PLKK11Ligqitg9MOX3-0tFT1Rmh3uJp7kA&index=3)
+
+
+
+# 32位
+
+![image-20221104103012083](32%E4%BD%8D%E5%92%8C64%E4%BD%8D%E5%AF%84%E5%AD%98%E5%99%A8.assets/image-20221104103012083.png)
+
+![image-20221104103108588](32%E4%BD%8D%E5%92%8C64%E4%BD%8D%E5%AF%84%E5%AD%98%E5%99%A8.assets/image-20221104103108588.png)
+
+
+
+
+
+- ==**<u>*任何使用EAX寄存器的指令，将同时把RAX的前32位清空*</u>**==。
+
+
+
+
+
+# 64位
+
+![image-20221104103154551](32%E4%BD%8D%E5%92%8C64%E4%BD%8D%E5%AF%84%E5%AD%98%E5%99%A8.assets/image-20221104103154551.png)

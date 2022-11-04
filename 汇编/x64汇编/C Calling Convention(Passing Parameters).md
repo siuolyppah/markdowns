@@ -1,0 +1,1 @@
+![image-20221104141037749](C%20Calling%20Convention(Passing%20Parameters).assets/image-20221104141037749.png)
